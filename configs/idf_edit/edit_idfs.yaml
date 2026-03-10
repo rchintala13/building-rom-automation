@@ -1,0 +1,40 @@
+project:
+  name: three_r2c_automation
+
+paths:
+  raw_idf_root: data/raw/resstock_idf
+  output_root: data/intermediate/perturbed_idf
+
+selection:
+  mode: batch         # single | batch
+  single_file: null   # used when mode=single
+  pattern: "*.idf"    # used when mode=batch
+  recursive: true
+
+output:
+  overwrite: false
+  suffix: "__edited"
+
+edits:
+  simulation_control:
+    run_period:
+      begin_month: 1
+      begin_day_of_month: 1
+      end_month: 1
+      end_day_of_month: 31
+
+    timestep_per_hour: 4
+
+  setpoints:
+    heating:
+      enabled: true
+      target_c: 20.0
+
+    cooling:
+      enabled: true
+      target_c: 24.0
+
+  perturbation:
+    enabled: false
+    cooling_offset_c: 0.0
+    heating_offset_c: 0.0
