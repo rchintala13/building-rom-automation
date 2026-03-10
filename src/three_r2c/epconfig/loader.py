@@ -12,6 +12,7 @@ from three_r2c.epconfig.types import (
     PathsConfig,
     PerturbationConfig,
     RunPeriodConfig,
+    ScheduleIntervalConfig,
     SelectionConfig,
     SetpointValueConfig,
     SetpointsConfig,
@@ -203,11 +204,25 @@ def _build_setpoint_value_config(
     raw_value: dict[str, Any],
     section_name: str,
 ) -> SetpointValueConfig:
-    _require_keys(raw_value, ["enabled", "target_c"], section_name=section_name)
+    _require_keys(
+        raw_value,
+        ["enabled", "target_c", "schedule_name", "default_value_c", "intervals"],
+        section_name=section_name)
+
+    intervals = [
+        ScheduleIntervalConfig(
+            until=str(item["until"]),
+            value_c=float(item["value_c"]),
+        )
+        for item in raw_value["intervals"]
+    ]
 
     return SetpointValueConfig(
         enabled=bool(raw_value["enabled"]),
-        target_c=float(raw_value["target_c"]),
+        schedule_type=str(raw_value["schedule_type"]),
+        schedule_name=str(raw_value["schedule_name"]),
+        default_value_c=float(raw_value["default_value_c"]),
+        intervals=intervals,
     )
 
 

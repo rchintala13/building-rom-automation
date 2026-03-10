@@ -16,10 +16,19 @@ class SimulationControlConfig:
     timestep_per_hour: int
 
 
-@dataclass
+@dataclass(frozen=True)
+class ScheduleIntervalConfig:
+    until: str
+    value_c: float
+
+
+@dataclass(frozen=True)
 class SetpointValueConfig:
     enabled: bool
-    target_c: float
+    schedule_type: str
+    schedule_name: str
+    default_value_c: float
+    intervals: list[ScheduleIntervalConfig]
 
 
 @dataclass

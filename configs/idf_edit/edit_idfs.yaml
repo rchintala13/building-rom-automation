@@ -2,8 +2,8 @@ project:
   name: three_r2c_automation
 
 paths:
-  raw_idf_root: data/raw/resstock_idf
-  output_root: data/intermediate/perturbed_idf
+  raw_idf_root: data/raw/resstock_idfs
+  output_root: data/intermediate/perturbed_idfs
 
 selection:
   mode: batch         # single | batch
@@ -28,11 +28,29 @@ edits:
   setpoints:
     heating:
       enabled: true
-      target_c: 20.0
+      schedule_type: day_interval
+      schedule_name: cooling setpoint day
+      default_value_c: 20.0
+      intervals:
+        - until: "06:00"
+          value_c: 18.0
+        - until: "22:00"
+          value_c: 21.0
+        - until: "24:00"
+          value_c: 18.0
 
     cooling:
       enabled: true
-      target_c: 24.0
+      schedule_type: day_interval
+      schedule_name: Cooling Setpoint Schedule
+      default_value_c: 24.0
+      intervals:
+        - until: "06:00"
+          value_c: 26.0
+        - until: "22:00"
+          value_c: 24.0
+        - until: "24:00"
+
 
   perturbation:
     enabled: false
