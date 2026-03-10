@@ -5,7 +5,7 @@ from typing import Any
 
 import yaml
 
-from three_r2c.epconfig.types import (
+from rom_automation.epconfig.types import (
     EditsConfig,
     IDFEditConfig,
     OutputConfig,

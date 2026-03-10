@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from three_r2c.epconfig.types import IDFEditConfig
+from rom_automation.epconfig.types import IDFEditConfig
 
 
 def select_idf_files(config: IDFEditConfig) -> list[Path]:

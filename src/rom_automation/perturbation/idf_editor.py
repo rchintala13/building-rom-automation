@@ -4,7 +4,7 @@ from pathlib import Path
 
 from eppy.modeleditor import IDF
 
-from three_r2c.epconfig.types import IDFEditConfig, SetpointValueConfig
+from rom_automation.epconfig.types import IDFEditConfig, SetpointValueConfig
 
 
 class IDFEditor:
