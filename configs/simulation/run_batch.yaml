@@ -1,0 +1,17 @@
+simulation:
+  eplus_exe: "C:/EnergyPlusV24-1-0/energyplus.exe"
+  weather_file: "data/raw/weather/58103.epw"
+
+paths:
+  edited_idf_root: "data/intermediate/perturbed_idfs"
+  output_root: "data/intermediate/simulation_outputs"
+
+selection:
+  mode: batch          # single | batch
+  single_file: null    # used only when mode = single
+  pattern: "*.idf"
+  recursive: true
+
+run_options:
+  overwrite: false
+  preserve_relative_structure: true

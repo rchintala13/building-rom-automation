@@ -1,0 +1,17 @@
+simulation:
+  eplus_exe: "C:/EnergyPlusV24-1-0/energyplus.exe"
+  weather_file: "data/raw/weather/USA_CO_Denver.epw"
+
+paths:
+  edited_idf_root: "data/intermediate/perturbed_idfs"
+  output_root: "data/intermediate/simulation_outputs"
+
+selection:
+  mode: single
+  single_file: "Denver/58103__edited.idf"
+  pattern: "*.idf"
+  recursive: false
+
+run_options:
+  overwrite: false
+  preserve_relative_structure: true

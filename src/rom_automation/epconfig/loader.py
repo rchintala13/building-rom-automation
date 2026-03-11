@@ -7,31 +7,26 @@ import yaml
 
 from rom_automation.epconfig.types import (
     EditsConfig,
+    EnergyPlusConfig,
     IDFEditConfig,
     OutputConfig,
     PathsConfig,
     PerturbationConfig,
+    RunOptionsConfig,
     RunPeriodConfig,
     ScheduleIntervalConfig,
     SelectionConfig,
     SetpointValueConfig,
     SetpointsConfig,
+    SimulationConfig,
     SimulationControlConfig,
+    SimulationPathsConfig,
 )
+
 
 def load_idf_edit_config(config_path: str | Path) -> IDFEditConfig:
     """
-    Load an IDF editing YAML config into an IDFEditConfig object.
-
-    Parameters
-    ----------
-    config_path
-        Path to the YAML configuration file.
-
-    Returns
-    -------
-    IDFEditConfig
-        Parsed and structured configuration object.
+    Load an IDF editing YAML config into a strongly-typed IDFEditConfig object.
     """
     config_path = Path(config_path)
 
@@ -44,7 +39,11 @@ def load_idf_edit_config(config_path: str | Path) -> IDFEditConfig:
     if raw is None:
         raise ValueError(f"Config file is empty: {config_path}")
 
-    _validate_top_level_sections(raw, config_path)
+    _validate_top_level_sections(
+        raw,
+        config_path,
+        required_sections=["paths", "selection", "output", "edits"],
+    )
 
     paths_cfg = _build_paths_config(raw["paths"])
     selection_cfg = _build_selection_config(raw["selection"])
@@ -59,14 +58,52 @@ def load_idf_edit_config(config_path: str | Path) -> IDFEditConfig:
     )
 
 
-def _validate_top_level_sections(raw: dict[str, Any], config_path: Path) -> None:
-    required_sections = ["paths", "selection", "output", "edits"]
+def load_simulation_config(config_path: str | Path) -> SimulationConfig:
+    """
+    Load an EnergyPlus simulation YAML config into a strongly-typed
+    SimulationConfig object.
+    """
+    config_path = Path(config_path)
 
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+
+    with config_path.open("r", encoding="utf-8") as f:
+        raw = yaml.safe_load(f)
+
+    if raw is None:
+        raise ValueError(f"Config file is empty: {config_path}")
+
+    _validate_top_level_sections(
+        raw,
+        config_path,
+        required_sections=["simulation", "paths", "selection", "run_options"],
+    )
+
+    simulation_cfg = _build_energyplus_config(raw["simulation"])
+    paths_cfg = _build_simulation_paths_config(raw["paths"])
+    selection_cfg = _build_selection_config(raw["selection"])
+    run_options_cfg = _build_run_options_config(raw["run_options"])
+
+    return SimulationConfig(
+        simulation=simulation_cfg,
+        paths=paths_cfg,
+        selection=selection_cfg,
+        run_options=run_options_cfg,
+    )
+
+
+def _validate_top_level_sections(
+    raw: dict[str, Any],
+    config_path: Path,
+    required_sections: list[str],
+) -> None:
     missing = [section for section in required_sections if section not in raw]
     if missing:
         raise KeyError(
             f"Missing required top-level section(s) in {config_path}: {missing}"
         )
+
 
 def _build_paths_config(raw_paths: dict[str, Any]) -> PathsConfig:
     _require_keys(raw_paths, ["raw_idf_root", "output_root"], section_name="paths")
@@ -76,12 +113,29 @@ def _build_paths_config(raw_paths: dict[str, Any]) -> PathsConfig:
         output_root=Path(raw_paths["output_root"]),
     )
 
+
+def _build_simulation_paths_config(
+    raw_paths: dict[str, Any],
+) -> SimulationPathsConfig:
+    _require_keys(
+        raw_paths,
+        ["edited_idf_root", "output_root"],
+        section_name="paths",
+    )
+
+    return SimulationPathsConfig(
+        edited_idf_root=Path(raw_paths["edited_idf_root"]),
+        output_root=Path(raw_paths["output_root"]),
+    )
+
+
 def _build_selection_config(raw_selection: dict[str, Any]) -> SelectionConfig:
     _require_keys(
         raw_selection,
         ["mode", "single_file", "pattern", "recursive"],
         section_name="selection",
     )
+
     mode = raw_selection["mode"]
     if mode not in {"single", "batch"}:
         raise ValueError(
@@ -97,9 +151,10 @@ def _build_selection_config(raw_selection: dict[str, Any]) -> SelectionConfig:
     return SelectionConfig(
         mode=mode,
         single_file=single_file,
-        pattern=raw_selection["pattern"],
+        pattern=str(raw_selection["pattern"]),
         recursive=bool(raw_selection["recursive"]),
     )
+
 
 def _build_output_config(raw_output: dict[str, Any]) -> OutputConfig:
     _require_keys(raw_output, ["overwrite", "suffix"], section_name="output")
@@ -108,6 +163,35 @@ def _build_output_config(raw_output: dict[str, Any]) -> OutputConfig:
         overwrite=bool(raw_output["overwrite"]),
         suffix=str(raw_output["suffix"]),
     )
+
+
+def _build_energyplus_config(raw_simulation: dict[str, Any]) -> EnergyPlusConfig:
+    _require_keys(
+        raw_simulation,
+        ["eplus_exe", "weather_file"],
+        section_name="simulation",
+    )
+
+    return EnergyPlusConfig(
+        eplus_exe=Path(raw_simulation["eplus_exe"]),
+        weather_file=Path(raw_simulation["weather_file"]),
+    )
+
+
+def _build_run_options_config(raw_run_options: dict[str, Any]) -> RunOptionsConfig:
+    _require_keys(
+        raw_run_options,
+        ["overwrite", "preserve_relative_structure"],
+        section_name="run_options",
+    )
+
+    return RunOptionsConfig(
+        overwrite=bool(raw_run_options["overwrite"]),
+        preserve_relative_structure=bool(
+            raw_run_options["preserve_relative_structure"]
+        ),
+    )
+
 
 def _build_edits_config(raw_edits: dict[str, Any]) -> EditsConfig:
     _require_keys(
@@ -206,8 +290,9 @@ def _build_setpoint_value_config(
 ) -> SetpointValueConfig:
     _require_keys(
         raw_value,
-        ["enabled", "target_c", "schedule_name", "default_value_c", "intervals"],
-        section_name=section_name)
+        ["enabled", "schedule_type", "schedule_name", "default_value_c", "intervals"],
+        section_name=section_name,
+    )
 
     intervals = [
         ScheduleIntervalConfig(
@@ -240,6 +325,7 @@ def _build_perturbation_config(
         cooling_offset_c=float(raw_perturbation["cooling_offset_c"]),
         heating_offset_c=float(raw_perturbation["heating_offset_c"]),
     )
+
 
 def _require_keys(
     raw_section: dict[str, Any],

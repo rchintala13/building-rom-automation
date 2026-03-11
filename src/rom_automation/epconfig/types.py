@@ -77,3 +77,33 @@ class IDFEditConfig:
     selection: SelectionConfig
     output: OutputConfig
     edits: EditsConfig
+
+
+# -----------------------------
+# New simulation config types
+# -----------------------------
+
+@dataclass(frozen=True)
+class SimulationPathsConfig:
+    edited_idf_root: Path
+    output_root: Path
+
+
+@dataclass(frozen=True)
+class EnergyPlusConfig:
+    eplus_exe: Path
+    weather_file: Path
+
+
+@dataclass(frozen=True)
+class RunOptionsConfig:
+    overwrite: bool
+    preserve_relative_structure: bool
+
+
+@dataclass(frozen=True)
+class SimulationConfig:
+    simulation: EnergyPlusConfig
+    paths: SimulationPathsConfig
+    selection: SelectionConfig
+    run_options: RunOptionsConfig
