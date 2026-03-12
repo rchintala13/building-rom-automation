@@ -1,5 +1,5 @@
 project:
-  name: three_r2c_automation
+  name: building_rom_automation
 
 paths:
   raw_idf_root: data/raw/resstock_idfs
@@ -29,7 +29,7 @@ edits:
     heating:
       enabled: true
       schedule_type: day_interval
-      schedule_name: cooling setpoint day
+      schedule_name: heating setpoint day
       default_value_c: 20.0
       intervals:
         - until: "06:00"
@@ -42,7 +42,7 @@ edits:
     cooling:
       enabled: true
       schedule_type: day_interval
-      schedule_name: Cooling Setpoint Schedule
+      schedule_name: cooling setpoint day
       default_value_c: 24.0
       intervals:
         - until: "06:00"
@@ -50,6 +50,7 @@ edits:
         - until: "22:00"
           value_c: 24.0
         - until: "24:00"
+          value_c: 26.0
 
 
   perturbation:

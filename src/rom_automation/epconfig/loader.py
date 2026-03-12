@@ -293,7 +293,6 @@ def _build_setpoint_value_config(
         ["enabled", "schedule_type", "schedule_name", "default_value_c", "intervals"],
         section_name=section_name,
     )
-
     intervals = [
         ScheduleIntervalConfig(
             until=str(item["until"]),

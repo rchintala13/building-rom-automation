@@ -1,5 +1,5 @@
 simulation:
-  eplus_exe: "C:/EnergyPlusV24-1-0/energyplus.exe"
+  eplus_exe: "C:/EnergyPlusV24-2-0/energyplus.exe"
   weather_file: "data/raw/weather/USA_CO_Denver.epw"
 
 paths:

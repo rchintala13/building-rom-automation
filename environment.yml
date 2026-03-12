@@ -1,4 +1,4 @@
-name: three_r2c_automation
+name: building_rom_automation
 
 channels:
   - conda-forge

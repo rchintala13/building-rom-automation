@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rom-automation"
+version = "0.1.0"
+description = "Automation framework for generating and calibrating 3R2C building reduced-order models from EnergyPlus simulations"
+authors = [
+    {name = "Rohit Chintala"}
+]
+requires-python = ">=3.12"
+
+dependencies = [
+    "pyyaml",
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "matplotlib",
+    "filterpy",
+    "eppy"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
