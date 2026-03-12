@@ -13,5 +13,5 @@ selection:
   recursive: false
 
 run_options:
-  overwrite: false
+  overwrite: true
   preserve_relative_structure: true

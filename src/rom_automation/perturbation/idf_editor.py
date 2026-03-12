@@ -80,26 +80,46 @@ class IDFEditor:
             )
 
     def _edit_schedule_day_interval(
-        self,
-        idf: IDF,
-        setpoint_cfg: SetpointValueConfig,
-        offset_c: float,
-    ) -> None:
+    self,
+    idf: IDF,
+    setpoint_cfg: SetpointValueConfig,
+    offset_c: float,
+) -> None:
+
         if setpoint_cfg.schedule_type != "day_interval":
             raise ValueError(
                 f"Unsupported schedule_type: {setpoint_cfg.schedule_type!r}"
             )
 
-        schedule = self._find_schedule_day_interval_by_name(
+        old_schedule = self._find_schedule_day_interval_by_name(
             idf=idf,
             schedule_name=setpoint_cfg.schedule_name,
         )
 
-        self._clear_day_interval_fields(schedule)
+        schedule_name = str(old_schedule.Name)
+        schedule_type_limits_name = str(old_schedule.Schedule_Type_Limits_Name)
+        interpolate_to_timestep = str(old_schedule.Interpolate_to_Timestep)
+
+        # Remove the old schedule
+        idf.removeidfobject(old_schedule)
+
+        fields = {
+            "Name": schedule_name,
+            "Schedule_Type_Limits_Name": schedule_type_limits_name,
+            "Interpolate_to_Timestep": interpolate_to_timestep,
+        }
 
         for i, interval in enumerate(setpoint_cfg.intervals, start=1):
-            setattr(schedule, f"Time_{i}", interval.until)
-            setattr(schedule, f"Value_Until_Time_{i}", interval.value_c + offset_c)
+
+            self._validate_until_string(interval.until)
+
+            fields[f"Time_{i}"] = interval.until
+            fields[f"Value_Until_Time_{i}"] = interval.value_c + offset_c
+
+        idf.newidfobject(
+            "SCHEDULE:DAY:INTERVAL",
+            **fields,
+        )
 
     def _find_schedule_day_interval_by_name(self, idf: IDF, schedule_name: str):
         schedules = idf.idfobjects["SCHEDULE:DAY:INTERVAL"]
@@ -147,3 +167,12 @@ class IDFEditor:
                 setattr(schedule, time_field, "")
             if hasattr(schedule, value_field):
                 setattr(schedule, value_field, "")
+
+    @staticmethod
+    def _validate_until_string(until: str) -> None:
+        import re
+
+        if not re.fullmatch(r"(?:[01]\d|2[0-4]):[0-5]\d", until):
+            raise ValueError(
+                f"Invalid schedule interval time {until!r}. Expected hh:mm, e.g. '06:00'."
+            )

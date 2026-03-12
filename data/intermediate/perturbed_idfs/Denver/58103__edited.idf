@@ -270,117 +270,11 @@ Schedule:Day:Interval,
     0;                        !- Value Until Time 1
 
 Schedule:Day:Interval,
-    heating setpoint day,     !- Name
-    Temperature,              !- Schedule Type Limits Name
-    No,                       !- Interpolate to Timestep
-    06:00,                    !- Time 1
-    18,                       !- Value Until Time 1
-    22:00,                    !- Time 2
-    21,                       !- Value Until Time 2
-    24:00,                    !- Time 3
-    18,                       !- Value Until Time 3
-    ,                         !- Time 4
-    ,                         !- Value Until Time 4
-    ,                         !- Time 5
-    ,                         !- Value Until Time 5
-    ,                         !- Time 6
-    ,                         !- Value Until Time 6
-    ,                         !- Time 7
-    ,                         !- Value Until Time 7
-    ,                         !- Time 8
-    ,                         !- Value Until Time 8
-    ,                         !- Time 9
-    ,                         !- Value Until Time 9
-    ,                         !- Time 10
-    ,                         !- Value Until Time 10
-    ,                         !- Time 11
-    ,                         !- Value Until Time 11
-    ,                         !- Time 12
-    ,                         !- Value Until Time 12
-    ,                         !- Time 13
-    ,                         !- Value Until Time 13
-    ,                         !- Time 14
-    ,                         !- Value Until Time 14
-    ,                         !- Time 15
-    ,                         !- Value Until Time 15
-    ,                         !- Time 16
-    ,                         !- Value Until Time 16
-    ,                         !- Time 17
-    ,                         !- Value Until Time 17
-    ,                         !- Time 18
-    ,                         !- Value Until Time 18
-    ,                         !- Time 19
-    ,                         !- Value Until Time 19
-    ,                         !- Time 20
-    ,                         !- Value Until Time 20
-    ,                         !- Time 21
-    ,                         !- Value Until Time 21
-    ,                         !- Time 22
-    ,                         !- Value Until Time 22
-    ,                         !- Time 23
-    ,                         !- Value Until Time 23
-    ,                         !- Time 24
-    ;                         !- Value Until Time 24
-
-Schedule:Day:Interval,
     heating setpoint default day,    !- Name
     Temperature,              !- Schedule Type Limits Name
     No,                       !- Interpolate to Timestep
     24:00,                    !- Time 1
     0;                        !- Value Until Time 1
-
-Schedule:Day:Interval,
-    cooling setpoint day,     !- Name
-    Temperature,              !- Schedule Type Limits Name
-    No,                       !- Interpolate to Timestep
-    06:00,                    !- Time 1
-    26,                       !- Value Until Time 1
-    22:00,                    !- Time 2
-    24,                       !- Value Until Time 2
-    24:00,                    !- Time 3
-    26,                       !- Value Until Time 3
-    ,                         !- Time 4
-    ,                         !- Value Until Time 4
-    ,                         !- Time 5
-    ,                         !- Value Until Time 5
-    ,                         !- Time 6
-    ,                         !- Value Until Time 6
-    ,                         !- Time 7
-    ,                         !- Value Until Time 7
-    ,                         !- Time 8
-    ,                         !- Value Until Time 8
-    ,                         !- Time 9
-    ,                         !- Value Until Time 9
-    ,                         !- Time 10
-    ,                         !- Value Until Time 10
-    ,                         !- Time 11
-    ,                         !- Value Until Time 11
-    ,                         !- Time 12
-    ,                         !- Value Until Time 12
-    ,                         !- Time 13
-    ,                         !- Value Until Time 13
-    ,                         !- Time 14
-    ,                         !- Value Until Time 14
-    ,                         !- Time 15
-    ,                         !- Value Until Time 15
-    ,                         !- Time 16
-    ,                         !- Value Until Time 16
-    ,                         !- Time 17
-    ,                         !- Value Until Time 17
-    ,                         !- Time 18
-    ,                         !- Value Until Time 18
-    ,                         !- Time 19
-    ,                         !- Value Until Time 19
-    ,                         !- Time 20
-    ,                         !- Value Until Time 20
-    ,                         !- Time 21
-    ,                         !- Value Until Time 21
-    ,                         !- Time 22
-    ,                         !- Value Until Time 22
-    ,                         !- Time 23
-    ,                         !- Value Until Time 23
-    ,                         !- Time 24
-    ;                         !- Value Until Time 24
 
 Schedule:Day:Interval,
     cooling setpoint default day,    !- Name
@@ -1001,6 +895,28 @@ Schedule:Day:Interval,
     No,                       !- Interpolate to Timestep
     24:00,                    !- Time 1
     0;                        !- Value Until Time 1
+
+SCHEDULE:DAY:INTERVAL,
+    heating setpoint day,     !- Name
+    Temperature,              !- Schedule Type Limits Name
+    No,                       !- Interpolate to Timestep
+    06:00,                    !- Time 1
+    18,                       !- Value Until Time 1
+    22:00,                    !- Time 2
+    21,                       !- Value Until Time 2
+    24:00,                    !- Time 3
+    18;                       !- Value Until Time 3
+
+SCHEDULE:DAY:INTERVAL,
+    cooling setpoint day,     !- Name
+    Temperature,              !- Schedule Type Limits Name
+    No,                       !- Interpolate to Timestep
+    06:00,                    !- Time 1
+    26,                       !- Value Until Time 1
+    22:00,                    !- Time 2
+    24,                       !- Value Until Time 2
+    24:00,                    !- Time 3
+    26;                       !- Value Until Time 3
 
 Schedule:Week:Daily,
     trans schedule winter=0.85 summer=0.7 Week Rule - Jan1-Apr28,    !- Name
