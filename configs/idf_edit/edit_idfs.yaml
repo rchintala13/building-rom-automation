@@ -5,6 +5,10 @@ paths:
   raw_idf_root: data/raw/resstock_idfs
   output_root: data/intermediate/perturbed_idfs
 
+schedule_files:
+  root_dir: data/raw/schedules
+  rewrite_paths: true
+
 selection:
   mode: batch         # single | batch
   single_file: null   # used when mode=single
@@ -12,7 +16,7 @@ selection:
   recursive: true
 
 output:
-  overwrite: false
+  overwrite: true
   suffix: "__edited"
 
 edits:

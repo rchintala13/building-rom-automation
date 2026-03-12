@@ -15,6 +15,7 @@ from rom_automation.epconfig.types import (
     RunOptionsConfig,
     RunPeriodConfig,
     ScheduleIntervalConfig,
+    ScheduleFileConfig,
     SelectionConfig,
     SetpointValueConfig,
     SetpointsConfig,
@@ -45,6 +46,9 @@ def load_idf_edit_config(config_path: str | Path) -> IDFEditConfig:
         required_sections=["paths", "selection", "output", "edits"],
     )
 
+    if "schedule_files" in raw:
+        schedule_files_cfg = _build_schedule_file_config(raw["schedule_files"])
+
     paths_cfg = _build_paths_config(raw["paths"])
     selection_cfg = _build_selection_config(raw["selection"])
     output_cfg = _build_output_config(raw["output"])
@@ -55,6 +59,7 @@ def load_idf_edit_config(config_path: str | Path) -> IDFEditConfig:
         selection=selection_cfg,
         output=output_cfg,
         edits=edits_cfg,
+        schedule_files= schedule_files_cfg
     )
 
 
@@ -111,6 +116,18 @@ def _build_paths_config(raw_paths: dict[str, Any]) -> PathsConfig:
     return PathsConfig(
         raw_idf_root=Path(raw_paths["raw_idf_root"]),
         output_root=Path(raw_paths["output_root"]),
+    )
+
+def _build_schedule_file_config(raw_schedules_cfg: dict[str, Any]) -> ScheduleFileConfig:
+    _require_keys(
+        raw_schedules_cfg,
+        ["root_dir", "rewrite_paths"],
+        section_name= "schedule_files"
+    )
+
+    return ScheduleFileConfig(
+        root_dir = Path(raw_schedules_cfg["root_dir"]),
+        rewrite_paths= bool(raw_schedules_cfg["rewrite_paths"])
     )
 
 

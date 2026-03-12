@@ -30,7 +30,7 @@ class IDFEditor:
         self._edit_run_period(idf=idf, config=config)
         self._edit_timestep(idf=idf, config=config)
         self._edit_setpoints(idf=idf, config=config)
-
+        self._rewrite_schedule_file_paths(idf=idf, config=config)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         idf.saveas(str(output_path))
 
@@ -111,6 +111,31 @@ class IDFEditor:
         raise ValueError(
             f"Could not find Schedule:Day:Interval with name {schedule_name!r}"
         )
+    
+    def _rewrite_schedule_file_paths(self, idf: IDF, config: IDFEditConfig) -> None:
+        """
+        Rewrite Schedule:File paths to point to a local schedule directory.
+        """
+        schedule_cfg = config.schedule_files
+
+        if schedule_cfg is None:
+            return
+
+        if not schedule_cfg.rewrite_paths:
+            return
+
+        schedules = idf.idfobjects["SCHEDULE:FILE"]
+
+        for schedule in schedules:
+
+            original_path = Path(schedule.File_Name)
+
+            # Keep only filename
+            filename = original_path.name
+
+            new_path = schedule_cfg.root_dir / filename
+
+            schedule.File_Name = str(new_path)
 
     @staticmethod
     def _clear_day_interval_fields(schedule) -> None:

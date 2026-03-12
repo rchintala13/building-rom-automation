@@ -3338,7 +3338,7 @@ Schedule:Constant,
 Schedule:File,
     lighting_interior,        !- Name
     Fractional,               !- Schedule Type Limits Name
-    /Users/dwald/Documents/GATES/GATES-ctrl-gen/data/CO_G08000816/inputs/schedule_tmp/58103.csv,    !- File Name
+    data\raw\schedules\58103.csv,    !- File Name
     5,                        !- Column Number
     1,                        !- Rows to Skip at Top
     8760,                     !- Number of Hours of Data
@@ -3350,7 +3350,7 @@ Schedule:File,
 Schedule:File,
     occupants,                !- Name
     Fractional,               !- Schedule Type Limits Name
-    /Users/dwald/Documents/GATES/GATES-ctrl-gen/data/CO_G08000816/inputs/schedule_tmp/58103.csv,    !- File Name
+    data\raw\schedules\58103.csv,    !- File Name
     1,                        !- Column Number
     1,                        !- Rows to Skip at Top
     8760,                     !- Number of Hours of Data
@@ -3362,7 +3362,7 @@ Schedule:File,
 Schedule:File,
     ceiling_fan,              !- Name
     Fractional,               !- Schedule Type Limits Name
-    /Users/dwald/Documents/GATES/GATES-ctrl-gen/data/CO_G08000816/inputs/schedule_tmp/58103.csv,    !- File Name
+    data\raw\schedules\58103.csv,    !- File Name
     4,                        !- Column Number
     1,                        !- Rows to Skip at Top
     8760,                     !- Number of Hours of Data
@@ -3374,7 +3374,7 @@ Schedule:File,
 Schedule:File,
     clothes_dryer,            !- Name
     Fractional,               !- Schedule Type Limits Name
-    /Users/dwald/Documents/GATES/GATES-ctrl-gen/data/CO_G08000816/inputs/schedule_tmp/58103.csv,    !- File Name
+    data\raw\schedules\58103.csv,    !- File Name
     8,                        !- Column Number
     1,                        !- Rows to Skip at Top
     8760,                     !- Number of Hours of Data
@@ -3386,7 +3386,7 @@ Schedule:File,
 Schedule:File,
     clothes_washer,           !- Name
     Fractional,               !- Schedule Type Limits Name
-    /Users/dwald/Documents/GATES/GATES-ctrl-gen/data/CO_G08000816/inputs/schedule_tmp/58103.csv,    !- File Name
+    data\raw\schedules\58103.csv,    !- File Name
     7,                        !- Column Number
     1,                        !- Rows to Skip at Top
     8760,                     !- Number of Hours of Data
@@ -3398,7 +3398,7 @@ Schedule:File,
 Schedule:File,
     cooking_range,            !- Name
     Fractional,               !- Schedule Type Limits Name
-    /Users/dwald/Documents/GATES/GATES-ctrl-gen/data/CO_G08000816/inputs/schedule_tmp/58103.csv,    !- File Name
+    data\raw\schedules\58103.csv,    !- File Name
     9,                        !- Column Number
     1,                        !- Rows to Skip at Top
     8760,                     !- Number of Hours of Data
@@ -3410,7 +3410,7 @@ Schedule:File,
 Schedule:File,
     plug_loads_other,         !- Name
     Fractional,               !- Schedule Type Limits Name
-    /Users/dwald/Documents/GATES/GATES-ctrl-gen/data/CO_G08000816/inputs/schedule_tmp/58103.csv,    !- File Name
+    data\raw\schedules\58103.csv,    !- File Name
     2,                        !- Column Number
     1,                        !- Rows to Skip at Top
     8760,                     !- Number of Hours of Data
@@ -3422,7 +3422,7 @@ Schedule:File,
 Schedule:File,
     plug_loads_tv,            !- Name
     Fractional,               !- Schedule Type Limits Name
-    /Users/dwald/Documents/GATES/GATES-ctrl-gen/data/CO_G08000816/inputs/schedule_tmp/58103.csv,    !- File Name
+    data\raw\schedules\58103.csv,    !- File Name
     3,                        !- Column Number
     1,                        !- Rows to Skip at Top
     8760,                     !- Number of Hours of Data
@@ -3434,7 +3434,7 @@ Schedule:File,
 Schedule:File,
     hot_water_clothes_washer,    !- Name
     Fractional,               !- Schedule Type Limits Name
-    /Users/dwald/Documents/GATES/GATES-ctrl-gen/data/CO_G08000816/inputs/schedule_tmp/58103.csv,    !- File Name
+    data\raw\schedules\58103.csv,    !- File Name
     6,                        !- Column Number
     1,                        !- Rows to Skip at Top
     8760,                     !- Number of Hours of Data
@@ -3446,7 +3446,7 @@ Schedule:File,
 Schedule:File,
     hot_water_fixtures,       !- Name
     Fractional,               !- Schedule Type Limits Name
-    /Users/dwald/Documents/GATES/GATES-ctrl-gen/data/CO_G08000816/inputs/schedule_tmp/58103.csv,    !- File Name
+    data\raw\schedules\58103.csv,    !- File Name
     10,                       !- Column Number
     1,                        !- Rows to Skip at Top
     8760,                     !- Number of Hours of Data

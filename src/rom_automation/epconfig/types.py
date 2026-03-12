@@ -49,6 +49,10 @@ class PathsConfig:
     raw_idf_root: Path
     output_root: Path
 
+@dataclass
+class ScheduleFileConfig:
+    root_dir: Path
+    rewrite_paths: bool
 
 @dataclass
 class SelectionConfig:
@@ -77,6 +81,7 @@ class IDFEditConfig:
     selection: SelectionConfig
     output: OutputConfig
     edits: EditsConfig
+    schedule_files: ScheduleFileConfig | None = None
 
 
 # -----------------------------
