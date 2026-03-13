@@ -57,7 +57,7 @@ ZoneCapacitanceMultiplier:ResearchSpecial,
     ;                         !- Generic Contaminant Capacity Multiplier
 
 Timestep,
-    4;                        !- Number of Timesteps per Hour
+    12;                       !- Number of Timesteps per Hour
 
 ConvergenceLimits,
     0;                        !- Minimum System Timestep

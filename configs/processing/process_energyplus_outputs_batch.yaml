@@ -1,0 +1,22 @@
+processing:
+  calendar_year: 2018
+  datetime_column: "Date/Time"
+  expected_timestep_seconds: 300.0
+
+paths:
+  simulation_output_root: "data/intermediate/simulation_outputs"
+  processed_output_root: "data/processed/training_data"
+
+selection:
+  mode: batch           # single | batch
+  single_file: null     # used only when mode = single
+  pattern: "eplusout.csv"
+  recursive: true
+
+output_files:
+  file_5min: "processed_5min.csv"
+  file_1h: "processed_1h.csv"
+
+run_options:
+  overwrite: false
+  preserve_relative_structure: true

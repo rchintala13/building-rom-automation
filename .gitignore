@@ -18,6 +18,9 @@ data/raw/schedules/
 # Ignore only EnergyPlus simulation output folder
 data/intermediate/simulation_outputs/
 
+# Ignore processed csv files
+data/processed/training_data
+
 # Keep edited IDFs
 !data/intermediate/perturbed_idf/
 !data/intermediate/perturbed_idf/**/*.idf

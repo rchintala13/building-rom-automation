@@ -13,6 +13,10 @@ from rom_automation.epconfig.types import (
     OutputVariablesConfig,
     PathsConfig,
     PerturbationConfig,
+    ProcessingConfig,
+    ProcessingOptionsConfig,
+    ProcessingOutputFilesConfig,
+    ProcessingPathsConfig,
     RunOptionsConfig,
     RunPeriodConfig,
     ScheduleIntervalConfig,
@@ -98,6 +102,41 @@ def load_simulation_config(config_path: str | Path) -> SimulationConfig:
         simulation=simulation_cfg,
         paths=paths_cfg,
         selection=selection_cfg,
+        run_options=run_options_cfg,
+    )
+
+def load_processing_config(config_path: str | Path) -> ProcessingConfig:
+    """
+    Load a processing YAML config into a strongly-typed ProcessingConfig object.
+    """
+    config_path = Path(config_path)
+
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+
+    with config_path.open("r", encoding="utf-8") as f:
+        raw = yaml.safe_load(f)
+
+    if raw is None:
+        raise ValueError(f"Config file is empty: {config_path}")
+
+    _validate_top_level_sections(
+        raw,
+        config_path,
+        required_sections=["processing", "paths", "selection", "output_files", "run_options"],
+    )
+
+    processing_cfg = _build_processing_options_config(raw["processing"])
+    paths_cfg = _build_processing_paths_config(raw["paths"])
+    selection_cfg = _build_selection_config(raw["selection"])
+    output_files_cfg = _build_processing_output_files_config(raw["output_files"])
+    run_options_cfg = _build_run_options_config(raw["run_options"])
+
+    return ProcessingConfig(
+        processing=processing_cfg,
+        paths=paths_cfg,
+        selection=selection_cfg,
+        output_files=output_files_cfg,
         run_options=run_options_cfg,
     )
 
@@ -386,3 +425,53 @@ def _validate_month_day(month: int, day: int, label: str) -> None:
 
     if not 1 <= day <= 31:
         raise ValueError(f"{label}: day must be between 1 and 31. Got {day}")
+    
+
+def _build_processing_options_config(
+    raw_processing: dict[str, Any],
+) -> ProcessingOptionsConfig:
+    _require_keys(
+        raw_processing,
+        ["calendar_year", "datetime_column", "expected_timestep_seconds"],
+        section_name="processing",
+    )
+
+    expected_timestep_seconds = raw_processing["expected_timestep_seconds"]
+    if expected_timestep_seconds is not None:
+        expected_timestep_seconds = float(expected_timestep_seconds)
+
+    return ProcessingOptionsConfig(
+        calendar_year=int(raw_processing["calendar_year"]),
+        datetime_column=str(raw_processing["datetime_column"]),
+        expected_timestep_seconds=expected_timestep_seconds,
+    )
+
+
+def _build_processing_paths_config(
+    raw_paths: dict[str, Any],
+) -> ProcessingPathsConfig:
+    _require_keys(
+        raw_paths,
+        ["simulation_output_root", "processed_output_root"],
+        section_name="paths",
+    )
+
+    return ProcessingPathsConfig(
+        simulation_output_root=Path(raw_paths["simulation_output_root"]),
+        processed_output_root=Path(raw_paths["processed_output_root"]),
+    )
+
+
+def _build_processing_output_files_config(
+    raw_output_files: dict[str, Any],
+) -> ProcessingOutputFilesConfig:
+    _require_keys(
+        raw_output_files,
+        ["file_5min", "file_1h"],
+        section_name="output_files",
+    )
+
+    return ProcessingOutputFilesConfig(
+        file_5min=str(raw_output_files["file_5min"]),
+        file_1h=str(raw_output_files["file_1h"]),
+    )

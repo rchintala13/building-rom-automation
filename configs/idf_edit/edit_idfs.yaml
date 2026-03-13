@@ -45,7 +45,7 @@ edits:
       end_month: 8
       end_day_of_month: 31
 
-    timestep_per_hour: 4
+    timestep_per_hour: 12
 
   setpoints:
     heating:

@@ -96,7 +96,7 @@ class IDFEditConfig:
 
 
 # -----------------------------
-# New simulation config types
+# simulation config types
 # -----------------------------
 
 @dataclass(frozen=True)
@@ -122,4 +122,35 @@ class SimulationConfig:
     simulation: EnergyPlusConfig
     paths: SimulationPathsConfig
     selection: SelectionConfig
+    run_options: RunOptionsConfig
+
+# -----------------------------
+# processing config types
+# -----------------------------
+
+@dataclass(frozen=True)
+class ProcessingOptionsConfig:
+    calendar_year: int
+    datetime_column: str
+    expected_timestep_seconds: float | None
+
+
+@dataclass(frozen=True)
+class ProcessingPathsConfig:
+    simulation_output_root: Path
+    processed_output_root: Path
+
+
+@dataclass(frozen=True)
+class ProcessingOutputFilesConfig:
+    file_5min: str
+    file_1h: str
+
+
+@dataclass(frozen=True)
+class ProcessingConfig:
+    processing: ProcessingOptionsConfig
+    paths: ProcessingPathsConfig
+    selection: SelectionConfig
+    output_files: ProcessingOutputFilesConfig
     run_options: RunOptionsConfig
