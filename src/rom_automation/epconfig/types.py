@@ -67,6 +67,16 @@ class OutputConfig:
     overwrite: bool
     suffix: str
 
+@dataclass(frozen=True)
+class OutputVariablesConfig:
+    site: list[str]
+    zone: list[str]
+
+@dataclass(frozen=True)
+class SimOutputsConfig:
+    zone_name: str
+    reporting_frequency: str
+    variables: OutputVariablesConfig
 
 @dataclass
 class EditsConfig:
@@ -80,6 +90,7 @@ class IDFEditConfig:
     paths: PathsConfig
     selection: SelectionConfig
     output: OutputConfig
+    simoutputs: SimOutputsConfig
     edits: EditsConfig
     schedule_files: ScheduleFileConfig | None = None
 

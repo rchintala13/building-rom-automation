@@ -19,12 +19,30 @@ output:
   overwrite: true
   suffix: "__edited"
 
+simoutputs:
+  zone_name: "conditioned space"
+  reporting_frequency: "Timestep"
+
+  variables:
+    site:
+      - "Site Outdoor Air Drybulb Temperature"
+      - "Site Direct Solar Radiation Rate per Area"
+      - "Site Diffuse Solar Radiation Rate per Area"
+
+    zone:
+      - "Zone Total Internal Convective Heating Energy"
+      - "Zone Windows Total Transmitted Solar Radiation Energy"
+      - "Zone Air System Sensible Cooling Energy"
+      - "Zone Air System Sensible Heating Energy"
+      - "Zone Thermostat Cooling Setpoint Temperature"
+      - "Zone Mean Air Temperature"
+
 edits:
   simulation_control:
     run_period:
-      begin_month: 1
+      begin_month: 8
       begin_day_of_month: 1
-      end_month: 1
+      end_month: 8
       end_day_of_month: 31
 
     timestep_per_hour: 4
@@ -55,7 +73,6 @@ edits:
           value_c: 24.0
         - until: "24:00"
           value_c: 26.0
-
 
   perturbation:
     enabled: false

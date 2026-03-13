@@ -10,6 +10,7 @@ from rom_automation.epconfig.types import (
     EnergyPlusConfig,
     IDFEditConfig,
     OutputConfig,
+    OutputVariablesConfig,
     PathsConfig,
     PerturbationConfig,
     RunOptionsConfig,
@@ -22,6 +23,7 @@ from rom_automation.epconfig.types import (
     SimulationConfig,
     SimulationControlConfig,
     SimulationPathsConfig,
+    SimOutputsConfig
 )
 
 
@@ -43,7 +45,7 @@ def load_idf_edit_config(config_path: str | Path) -> IDFEditConfig:
     _validate_top_level_sections(
         raw,
         config_path,
-        required_sections=["paths", "selection", "output", "edits"],
+        required_sections=["paths", "selection", "output", "simoutputs", "edits"],
     )
 
     if "schedule_files" in raw:
@@ -52,12 +54,14 @@ def load_idf_edit_config(config_path: str | Path) -> IDFEditConfig:
     paths_cfg = _build_paths_config(raw["paths"])
     selection_cfg = _build_selection_config(raw["selection"])
     output_cfg = _build_output_config(raw["output"])
+    simoutputs_cfg = _build_simoutputs_config(raw["simoutputs"])
     edits_cfg = _build_edits_config(raw["edits"])
 
     return IDFEditConfig(
         paths=paths_cfg,
         selection=selection_cfg,
         output=output_cfg,
+        simoutputs=simoutputs_cfg,
         edits=edits_cfg,
         schedule_files= schedule_files_cfg
     )
@@ -206,6 +210,29 @@ def _build_run_options_config(raw_run_options: dict[str, Any]) -> RunOptionsConf
         overwrite=bool(raw_run_options["overwrite"]),
         preserve_relative_structure=bool(
             raw_run_options["preserve_relative_structure"]
+        ),
+    )
+
+def _build_simoutputs_config(raw_outputs: dict[str, Any]) -> SimOutputsConfig:
+    _require_keys(
+        raw_outputs,
+        ["zone_name", "reporting_frequency", "variables"],
+        section_name="outputs",
+    )
+
+    raw_variables = raw_outputs["variables"]
+    _require_keys(
+        raw_variables,
+        ["site", "zone"],
+        section_name="outputs.variables",
+    )
+
+    return SimOutputsConfig(
+        zone_name=str(raw_outputs["zone_name"]),
+        reporting_frequency=str(raw_outputs["reporting_frequency"]),
+        variables=OutputVariablesConfig(
+            site=[str(v) for v in raw_variables["site"]],
+            zone=[str(v) for v in raw_variables["zone"]],
         ),
     )
 

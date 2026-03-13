@@ -31,6 +31,7 @@ class IDFEditor:
         self._edit_timestep(idf=idf, config=config)
         self._edit_setpoints(idf=idf, config=config)
         self._rewrite_schedule_file_paths(idf=idf, config=config)
+        self._replace_output_variables(idf=idf, config=config)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         idf.saveas(str(output_path))
 
@@ -157,6 +158,36 @@ class IDFEditor:
 
             schedule.File_Name = str(new_path)
 
+    def _replace_output_variables(self, idf: IDF, config: IDFEditConfig) -> None:
+        """
+        Remove all existing Output:Variable objects and replace them with the
+        exact set requested in the YAML config.
+        """
+        zone_name = config.simoutputs.zone_name
+        reporting_frequency = config.simoutputs.reporting_frequency
+
+        self._validate_zone_exists(idf=idf, zone_name=zone_name)
+
+        existing_output_vars = list(idf.idfobjects["OUTPUT:VARIABLE"])
+        for obj in existing_output_vars:
+            idf.removeidfobject(obj)
+
+        for variable_name in config.simoutputs.variables.site:
+            idf.newidfobject(
+                "OUTPUT:VARIABLE",
+                Key_Value="Environment",
+                Variable_Name=variable_name,
+                Reporting_Frequency=reporting_frequency,
+            )
+
+        for variable_name in config.simoutputs.variables.zone:
+            idf.newidfobject(
+                "OUTPUT:VARIABLE",
+                Key_Value=zone_name,
+                Variable_Name=variable_name,
+                Reporting_Frequency=reporting_frequency,
+            )
+
     @staticmethod
     def _clear_day_interval_fields(schedule) -> None:
         for i in range(1, 25):
@@ -175,4 +206,17 @@ class IDFEditor:
         if not re.fullmatch(r"(?:[01]\d|2[0-4]):[0-5]\d", until):
             raise ValueError(
                 f"Invalid schedule interval time {until!r}. Expected hh:mm, e.g. '06:00'."
+            )
+    
+    def _validate_zone_exists(self, idf: IDF, zone_name: str) -> None:
+        zone_names = {
+            str(zone.Name).strip().lower()
+            for zone in idf.idfobjects["ZONE"]
+        }
+
+        if zone_name.strip().lower() not in zone_names:
+            available = sorted(zone_names)
+            raise ValueError(
+                f"Zone name {zone_name!r} not found in IDF. "
+                f"Available zones: {available}"
             )
