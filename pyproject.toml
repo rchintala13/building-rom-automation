@@ -18,7 +18,10 @@ dependencies = [
     "scikit-learn",
     "matplotlib",
     "filterpy",
-    "eppy"
+    "eppy",
+    "langgraph",
+    "langchain-core",
+    "langchain-anthropic",
 ]
 
 [tool.setuptools]
