@@ -60,6 +60,7 @@ class SelectionConfig:
     single_file: str | None
     pattern: str
     recursive: bool
+    city: str | None = None
 
 
 @dataclass

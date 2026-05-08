@@ -66,21 +66,27 @@ def _select_batch_files(config: ProcessingConfig) -> list[Path]:
     simulation_root = config.paths.simulation_output_root
     pattern = config.selection.pattern
     recursive = config.selection.recursive
+    city = config.selection.city
+
+    search_root = simulation_root / city if city else simulation_root
+
+    if not search_root.exists():
+        raise FileNotFoundError(f"City directory not found: {search_root}")
 
     if recursive:
         files = sorted(
-            path for path in simulation_root.rglob(pattern) if path.is_file()
+            path for path in search_root.rglob(pattern) if path.is_file()
         )
     else:
         files = sorted(
-            path for path in simulation_root.glob(pattern) if path.is_file()
+            path for path in search_root.glob(pattern) if path.is_file()
         )
 
     csv_files = [path for path in files if path.suffix.lower() == ".csv"]
 
     if not csv_files:
         raise FileNotFoundError(
-            f"No simulation CSV files found under {simulation_root} "
+            f"No simulation CSV files found under {search_root} "
             f"with pattern {pattern!r}"
         )
 

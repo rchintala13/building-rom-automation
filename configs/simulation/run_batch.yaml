@@ -11,6 +11,7 @@ selection:
   single_file: null    # used only when mode = single
   pattern: "*.idf"
   recursive: true
+  city: null           # restrict batch to a city subfolder (e.g. Denver), or null for all cities
 
 run_options:
   overwrite: false

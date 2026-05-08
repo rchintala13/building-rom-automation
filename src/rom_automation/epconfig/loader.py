@@ -213,6 +213,7 @@ def _build_selection_config(raw_selection: dict[str, Any]) -> SelectionConfig:
         single_file=single_file,
         pattern=str(raw_selection["pattern"]),
         recursive=bool(raw_selection["recursive"]),
+        city=raw_selection.get("city") or None,
     )
 
 
