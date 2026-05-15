@@ -1,0 +1,147 @@
+paths:
+  raw_idf_root: "data/raw/resstock_idfs"
+  processed_root: "data/processed/training_data"
+  output_root: "data/processed/sysid_results"
+
+selection:
+  city: "Denver"       # must match a subfolder in raw_idf_root
+  house_name: "58103"  # must match an IDF filename (without extension) in that city folder
+
+dataset:
+  history_hours: 6.0
+
+ekf:
+  # 12 steps = 1 hour ahead prediction for 5-minute data
+  n_steps_ahead: 12
+
+  objective_weights:
+    one_step: 0.3
+    n_step: 0.7
+
+  # Measurement noise variance for indoor temperature [degC^2]
+  r_value: 0.05
+
+  # Process noise covariance diagonal
+  # Order:
+  # [
+  #   T_in_C,
+  #   T_iw_C,
+  #   T_ow_C,
+  #   r_in_iw,
+  #   r_iw_ow,
+  #   r_ow_oa,
+  #   r_in_oa,
+  #   c_in,
+  #   c_w,
+  #   alpha_ghi_outer_wall,
+  #   alpha_ghi_inner_wall
+  # ]
+
+  q_diag:
+    - 1.0e-4   # T_in_C [degC^2]
+    - 1.0e-4   # T_iw_C [degC^2]
+    - 1.0e-4   # T_ow_C [degC^2]
+
+    - 1.0e-7   # r_in_iw [degC / kW]
+    - 1.0e-7   # r_iw_ow [degC / kW]
+    - 1.0e-7   # r_ow_oa [degC / kW]
+    - 1.0e-7   # r_in_oa [degC / kW]
+
+    - 1.0e2    # c_in [kWh / degC]
+    - 1.0e2    # c_w [kWh / degC]
+
+    - 1.0e-5   # alpha_ghi_outer_wall [(kW solar absorbed) / (kW/m2 GHI)]
+    - 1.0e-5   # alpha_ghi_inner_wall [(kW solar absorbed) / (kW/m2 GHI)]
+
+  # Initial covariance diagonal
+  p0_diag:
+    - 1.0      # T_in_C [degC]
+    - 1.0      # T_iw_C [degC]
+    - 1.0      # T_ow_C [degC]
+
+    - 1.0e-2   # r_in_iw [degC / kW]
+    - 1.0e-2   # r_iw_ow [degC / kW]
+    - 1.0e-2   # r_ow_oa [degC / kW]
+    - 1.0e-2   # r_in_oa [degC / kW]
+
+    - 1.0e4    # c_in [kWh / degC]
+    - 1.0e4    # c_w [kWh / degC]
+
+    - 0.1      # alpha_ghi_outer_wall [(kW solar absorbed) / (kW/m2 GHI)]
+    - 0.1      # alpha_ghi_inner_wall [(kW solar absorbed) / (kW/m2 GHI)]
+
+parameter_grid:
+
+  # Thermal resistances
+  # Units: [degC / kW]
+  #
+  # Typical residential-scale ranges:
+  # - lower R => faster heat transfer
+  # - higher R => better insulation
+
+  r_in_iw:
+    - 0.01
+    - 0.05
+    - 0.10
+
+  r_iw_ow:
+    - 0.05
+    - 0.10
+    - 0.20
+
+  r_ow_oa:
+    - 0.10
+    - 0.25
+    - 0.50
+
+  r_in_oa:
+    - 0.10
+    - 0.25
+    - 0.50
+
+  # Thermal capacitances
+  # Units: [kWh / degC]
+  #
+  # c_in:
+  #   indoor air effective capacitance
+  #
+  # c_w:
+  #   total wall capacitance
+  #   internally split as:
+  #       c_iw = c_w / 2
+  #       c_ow = c_w / 2
+
+  c_in:
+    - 0.5
+    - 1.0
+    - 2.0
+
+  c_w:
+    - 10.0
+    - 25.0
+    - 50.0
+
+  # Solar gain scaling coefficients
+  #
+  # GHI input units:
+  #   [kW / m2]
+  #
+  # Alpha units:
+  #   [(kW absorbed solar gain) / (kW/m2 incident GHI)]
+  #
+  # These effectively absorb:
+  # - wall area
+  # - absorptivity
+  # - effective solar coupling
+
+  alpha_ghi_outer_wall:
+    - 0.00
+    - 0.05
+    - 0.10
+    - 0.20
+
+  alpha_ghi_inner_wall:
+    - 0.00
+    - 0.05
+    - 0.10
+    - 0.20
