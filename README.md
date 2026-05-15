@@ -1,3 +1,24 @@
+## Setup
+
+Create and activate the conda environment:
+
+```bash
+conda env create -f environment.yml
+conda activate building_rom_automation
+```
+
+The source code lives under `src/` (src-layout), so `rom_automation` is not on Python's path by default. Install the package in editable mode once to make it importable:
+
+```bash
+pip install -e .
+```
+
+This only needs to be done once per environment. After that, all CLI commands are run as Python modules from the project root:
+
+```bash
+python -m rom_automation.cli.<script_name> --config <path_to_config>
+```
+
 ## Workflows
 
 ### Full Pipeline From Raw IDFs to Processed Training Data for EKF
@@ -73,4 +94,15 @@ Set `city` in the config to restrict a batch run to one city subfolder (e.g. `De
 ```bash
 python -m rom_automation.cli.process_energyplus_outputs \
     --config configs/processing/process_energyplus_outputs_batch.yaml
+```
+
+### Run EKF System Identification
+
+Runs EKF-based 4R2C system identification on a processed training CSV. The EKF is run over a parameter grid; the best-fit thermal parameters (R, C, solar gain coefficients) are saved to `output_dir` along with evaluation metrics.
+
+The config file specifies the input CSV path, output directory, EKF tuning parameters (`q_diag`, `r_value`, `p0_diag`), prediction horizon (`n_steps_ahead`), and the parameter grid to search over.
+
+```bash
+python -m rom_automation.cli.run_sysid_ekf \
+    --config configs/sysid/run_ekf_sysid.yaml
 ```
