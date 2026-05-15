@@ -7,12 +7,12 @@ import json
 import numpy as np
 import pandas as pd
 
-from three_r2c.logging_utils import get_logger
-from three_r2c.models.types import FourR2CParameters
-from three_r2c.sysid.dataset_adapter import build_sysid_dataset
-from three_r2c.sysid.ekf import AugmentedStateIndex
-from three_r2c.sysid.parameter_grid import ParameterCandidateGrid
-from three_r2c.sysid.trainer import EKFNoiseConfig, EKFSysIDTrainer
+from rom_automation.logging_utils import get_logger
+from rom_automation.models.types import FourR2CParameters
+from rom_automation.sysid.dataset_adapter import build_sysid_dataset
+from rom_automation.sysid.ekf import AugmentedStateIndex
+from rom_automation.sysid.parameter_grid import ParameterCandidateGrid
+from rom_automation.sysid.trainer import EKFNoiseConfig, EKFSysIDTrainer
 
 
 def run_sysid_ekf_workflow(
