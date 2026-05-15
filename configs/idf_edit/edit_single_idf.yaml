@@ -10,10 +10,10 @@ schedule_files:
   rewrite_paths: true
 
 selection:
-  mode: batch         # single | batch
-  single_file: null   # used when mode=single
+  mode: single
+  single_file: data/raw/resstock_idfs/Denver/58103.idf
   pattern: "*.idf"    # used when mode=batch
-  recursive: true     # looks within subfolders of resstock_idfs if true eg/Denver/*.idf
+  recursive: true
   city: null          # restrict batch to a city subfolder (e.g. Denver), or null for all cities
 
 output:

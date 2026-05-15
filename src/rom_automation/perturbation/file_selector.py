@@ -60,17 +60,23 @@ def _select_batch_files(config: IDFEditConfig) -> list[Path]:
     raw_root = config.paths.raw_idf_root
     pattern = config.selection.pattern
     recursive = config.selection.recursive
+    city = config.selection.city
+
+    search_root = raw_root / city if city else raw_root
+
+    if not search_root.exists():
+        raise FileNotFoundError(f"City directory not found: {search_root}")
 
     if recursive:
-        files = sorted(path for path in raw_root.rglob(pattern) if path.is_file())
+        files = sorted(path for path in search_root.rglob(pattern) if path.is_file())
     else:
-        files = sorted(path for path in raw_root.glob(pattern) if path.is_file())
+        files = sorted(path for path in search_root.glob(pattern) if path.is_file())
 
     idf_files = [path for path in files if path.suffix.lower() == ".idf"]
 
     if not idf_files:
         raise FileNotFoundError(
-            f"No IDF files found under {raw_root} with pattern {pattern!r}"
+            f"No IDF files found under {search_root} with pattern {pattern!r}"
         )
 
     return idf_files
