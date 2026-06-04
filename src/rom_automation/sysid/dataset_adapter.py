@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from three_r2c.models.types import FourR2CInput
+from rom_automation.models.types import FourR2CInput
 
 
 REQUIRED_COLUMNS: tuple[str, ...] = (
@@ -14,7 +14,7 @@ REQUIRED_COLUMNS: tuple[str, ...] = (
     "P_int_kW",
     "P_cool_kW",
     "P_heat_kW",
-    "G_ghi_W_m2",
+    "G_ghi_kW_m2",
 )
 
 
@@ -104,7 +104,7 @@ def build_input_sequence(df: pd.DataFrame) -> list[FourR2CInput]:
         inputs.append(
             FourR2CInput(
                 t_oa_c=float(df["T_oa_C"].iloc[i]),
-                g_ghi_w_m2=float(df["G_ghi_W_m2"].iloc[i]),
+                g_ghi_kw_m2=float(df["G_ghi_kW_m2"].iloc[i]),
                 p_int_kw=float(df["P_int_kW"].iloc[i]),
                 p_sol_win_kw=0.0,
                 p_hvac_kw=float(p_hvac_kw[i]),

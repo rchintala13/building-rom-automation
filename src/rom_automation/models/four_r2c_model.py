@@ -242,7 +242,7 @@ class FourR2CModel:
         return np.array(
             [
                 inp.t_oa_c,
-                inp.g_ghi_w_m2,
+                inp.g_ghi_kw_m2,
                 inp.p_int_kw,
                 inp.p_hvac_kw,
             ],

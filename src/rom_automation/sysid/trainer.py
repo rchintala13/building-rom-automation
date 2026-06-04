@@ -4,14 +4,14 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from three_r2c.models.types import FourR2CInput, FourR2CParameters
-from three_r2c.sysid.ekf import AugmentedStateEKF, AugmentedStateIndex, EKFResult
-from three_r2c.sysid.evaluator import EKFEvaluator, PredictionMetrics
-from three_r2c.sysid.initial_state_optimizer import (
+from rom_automation.models.types import FourR2CInput, FourR2CParameters
+from rom_automation.sysid.ekf import AugmentedStateEKF, AugmentedStateIndex, EKFResult
+from rom_automation.sysid.evaluator import EKFEvaluator, PredictionMetrics
+from rom_automation.sysid.initial_state_optimizer import (
     InitialStateOptimizationResult,
     InitialStateOptimizer,
 )
-from three_r2c.sysid.parameter_grid import (
+from rom_automation.sysid.parameter_grid import (
     ParameterCandidateGrid,
     generate_parameter_candidates,
 )
