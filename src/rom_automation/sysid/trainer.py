@@ -12,7 +12,9 @@ from rom_automation.sysid.initial_state_optimizer import (
     InitialStateOptimizer,
 )
 from rom_automation.sysid.parameter_grid import (
+    ParameterBoundFractions,
     ParameterCandidateGrid,
+    compute_parameter_bounds,
     generate_parameter_candidates,
 )
 
@@ -74,6 +76,7 @@ class EKFSysIDTrainer:
         history_t_in_c: np.ndarray,
         dt_seconds: float,
         n_steps_ahead: int,
+        bound_fractions: ParameterBoundFractions | None = None,
     ) -> SysIDTrainingResult:
         """
         Run full training across all parameter candidates.
@@ -136,12 +139,23 @@ class EKFSysIDTrainer:
                 state_index=self.state_index,
             )
 
+            if bound_fractions is None:
+                z_lower = None
+                z_upper = None
+            else:
+                z_lower, z_upper = self._build_augmented_bounds(
+                    bound_fractions=bound_fractions,
+                    params=params,
+                )
+
             ekf_result = ekf.run(
                 inputs=inputs,
                 measurements_t_in_c=np.asarray(measurements_t_in_c, dtype=float),
                 z0=z0,
                 p0=self.ekf_noise_config.p0,
                 dt_seconds=dt_seconds,
+                z_lower=z_lower,
+                z_upper=z_upper,
             )
 
             metrics = evaluator.evaluate(
@@ -225,6 +239,37 @@ class EKFSysIDTrainer:
         z0[self.state_index.alpha_ghi_inner_wall] = params.alpha_ghi_inner_wall
 
         return z0
+
+    def _build_augmented_bounds(
+        self,
+        bound_fractions: ParameterBoundFractions,
+        params: FourR2CParameters,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Build per-state lower/upper bound vectors for the augmented EKF state.
+
+        Temperatures are left unbounded (-inf/+inf). Each parameter is bounded
+        by [frac * initial_guess, multiple * initial_guess] from `params`.
+        """
+        n = self.state_index.n_states
+        z_lower = np.full(n, -np.inf, dtype=float)
+        z_upper = np.full(n, np.inf, dtype=float)
+
+        bounds = compute_parameter_bounds(
+            fractions=bound_fractions,
+            initial_guess=params,
+        )
+
+        z_lower[self.state_index.r_in_iw], z_upper[self.state_index.r_in_iw] = bounds.r_in_iw
+        z_lower[self.state_index.r_iw_ow], z_upper[self.state_index.r_iw_ow] = bounds.r_iw_ow
+        z_lower[self.state_index.r_ow_oa], z_upper[self.state_index.r_ow_oa] = bounds.r_ow_oa
+        z_lower[self.state_index.r_in_oa], z_upper[self.state_index.r_in_oa] = bounds.r_in_oa
+        z_lower[self.state_index.c_in], z_upper[self.state_index.c_in] = bounds.c_in
+        z_lower[self.state_index.c_w], z_upper[self.state_index.c_w] = bounds.c_w
+        z_lower[self.state_index.alpha_ghi_outer_wall], z_upper[self.state_index.alpha_ghi_outer_wall] = bounds.alpha_ghi_outer_wall
+        z_lower[self.state_index.alpha_ghi_inner_wall], z_upper[self.state_index.alpha_ghi_inner_wall] = bounds.alpha_ghi_inner_wall
+
+        return z_lower, z_upper
 
     def _compute_objective(self, metrics: PredictionMetrics) -> float:
         """

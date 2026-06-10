@@ -6,6 +6,18 @@ from itertools import product
 from rom_automation.models.types import FourR2CParameters
 
 
+_PARAMETER_NAMES: tuple[str, ...] = (
+    "r_in_iw",
+    "r_iw_ow",
+    "r_ow_oa",
+    "r_in_oa",
+    "c_in",
+    "c_w",
+    "alpha_ghi_outer_wall",
+    "alpha_ghi_inner_wall",
+)
+
+
 @dataclass(frozen=True)
 class ParameterCandidateGrid:
     """
@@ -20,6 +32,114 @@ class ParameterCandidateGrid:
     c_w: list[float]
     alpha_ghi_outer_wall: list[float]
     alpha_ghi_inner_wall: list[float]
+
+
+@dataclass(frozen=True)
+class _Fractions:
+    frac: float
+    multiple: float
+
+
+@dataclass(frozen=True)
+class ParameterBoundFractions:
+    """
+    Per-parameter bound fractions used during EKF updates.
+
+    For each parameter the EKF clips the augmented-state component to:
+        [frac * initial_guess, multiple * initial_guess]
+
+    where `initial_guess` is the candidate value used to initialize the EKF.
+    """
+
+    r_in_iw: _Fractions
+    r_iw_ow: _Fractions
+    r_ow_oa: _Fractions
+    r_in_oa: _Fractions
+    c_in: _Fractions
+    c_w: _Fractions
+    alpha_ghi_outer_wall: _Fractions
+    alpha_ghi_inner_wall: _Fractions
+
+
+@dataclass(frozen=True)
+class ParameterBounds:
+    """
+    Absolute lower/upper bounds for each parameter, computed for a given
+    candidate initial guess.
+    """
+
+    r_in_iw: tuple[float, float]
+    r_iw_ow: tuple[float, float]
+    r_ow_oa: tuple[float, float]
+    r_in_oa: tuple[float, float]
+    c_in: tuple[float, float]
+    c_w: tuple[float, float]
+    alpha_ghi_outer_wall: tuple[float, float]
+    alpha_ghi_inner_wall: tuple[float, float]
+
+
+def parameter_bound_fractions_from_dict(
+    fractions_dict: dict,
+) -> ParameterBoundFractions:
+    """
+    Build a ParameterBoundFractions from a nested dict, e.g.:
+        {
+            "r_in_iw": {"frac": 0.5, "multiple": 2.0},
+            ...
+        }
+    """
+    missing = [name for name in _PARAMETER_NAMES if name not in fractions_dict]
+    if missing:
+        raise ValueError(
+            f"parameter_bounds is missing entries for: {missing}"
+        )
+
+    kwargs = {}
+    for name in _PARAMETER_NAMES:
+        entry = fractions_dict[name]
+        if "frac" not in entry or "multiple" not in entry:
+            raise ValueError(
+                f"parameter_bounds['{name}'] must define both 'frac' and 'multiple'."
+            )
+
+        frac = float(entry["frac"])
+        multiple = float(entry["multiple"])
+
+        if frac > multiple:
+            raise ValueError(
+                f"parameter_bounds['{name}']: frac ({frac}) must be <= multiple ({multiple})."
+            )
+
+        kwargs[name] = _Fractions(frac=frac, multiple=multiple)
+
+    return ParameterBoundFractions(**kwargs)
+
+
+def compute_parameter_bounds(
+    fractions: ParameterBoundFractions,
+    initial_guess: FourR2CParameters,
+) -> ParameterBounds:
+    """
+    Resolve per-parameter [frac * initial, multiple * initial] bounds for one
+    candidate initial guess.
+    """
+    kwargs = {}
+    for name in _PARAMETER_NAMES:
+        f: _Fractions = getattr(fractions, name)
+        initial = float(getattr(initial_guess, name))
+        lower = f.frac * initial
+        upper = f.multiple * initial
+
+        if lower > upper:
+            lower, upper = upper, lower
+
+        kwargs[name] = (lower, upper)
+
+    return ParameterBounds(**kwargs)
+
+
+def parameter_names() -> tuple[str, ...]:
+    return _PARAMETER_NAMES
 
 
 def generate_parameter_candidates(

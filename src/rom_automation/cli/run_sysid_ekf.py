@@ -66,6 +66,7 @@ def main() -> None:
         output_dir=output_dir,
         history_hours=float(cfg["dataset"]["history_hours"]),
         parameter_grid_dict=cfg["parameter_grid"],
+        parameter_bounds_dict=cfg["parameter_bounds"],
         q_diag=cfg["ekf"]["q_diag"],
         r_value=float(cfg["ekf"]["r_value"]),
         p0_diag=cfg["ekf"]["p0_diag"],

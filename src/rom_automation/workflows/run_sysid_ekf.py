@@ -11,7 +11,10 @@ from rom_automation.logging_utils import get_logger
 from rom_automation.models.types import FourR2CParameters
 from rom_automation.sysid.dataset_adapter import build_sysid_dataset
 from rom_automation.sysid.ekf import AugmentedStateIndex
-from rom_automation.sysid.parameter_grid import ParameterCandidateGrid
+from rom_automation.sysid.parameter_grid import (
+    ParameterCandidateGrid,
+    parameter_bound_fractions_from_dict,
+)
 from rom_automation.sysid.trainer import EKFNoiseConfig, EKFSysIDTrainer
 
 
@@ -20,6 +23,7 @@ def run_sysid_ekf_workflow(
     output_dir: str | Path,
     history_hours: float,
     parameter_grid_dict: dict,
+    parameter_bounds_dict: dict,
     q_diag: list[float],
     r_value: float,
     p0_diag: list[float],
@@ -79,6 +83,7 @@ def run_sysid_ekf_workflow(
     )
 
     parameter_grid = ParameterCandidateGrid(**parameter_grid_dict)
+    bound_fractions = parameter_bound_fractions_from_dict(parameter_bounds_dict)
 
     state_index = AugmentedStateIndex()
     n_aug = state_index.n_states
@@ -110,6 +115,7 @@ def run_sysid_ekf_workflow(
         history_t_in_c=dataset.history_t_in_c,
         dt_seconds=timestep_seconds,
         n_steps_ahead=n_steps_ahead,
+        bound_fractions=bound_fractions,
     )
     logger.info("Finished EKF sysid training.")
 

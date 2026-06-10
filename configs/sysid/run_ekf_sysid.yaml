@@ -145,3 +145,45 @@ parameter_grid:
     - 0.05
     - 0.10
     - 0.20
+
+# Per-parameter bounds applied during EKF updates.
+#
+# For each candidate run, the parameter component of the augmented state is
+# clipped after every EKF update to:
+#
+#     [frac * initial_guess, multiple * initial_guess]
+#
+# where `initial_guess` is the candidate value drawn from `parameter_grid`.
+#
+# Notes:
+# - If frac == multiple, the parameter is effectively frozen at the initial guess.
+# - For alpha_* candidates that include 0.0, both bounds collapse to 0 for that
+#   candidate (since frac * 0 == multiple * 0 == 0), freezing the parameter.
+
+parameter_bounds:
+  r_in_iw:
+    frac: 0.5
+    multiple: 2.0
+  r_iw_ow:
+    frac: 0.5
+    multiple: 2.0
+  r_ow_oa:
+    frac: 0.5
+    multiple: 2.0
+  r_in_oa:
+    frac: 0.5
+    multiple: 2.0
+
+  c_in:
+    frac: 0.5
+    multiple: 2.0
+  c_w:
+    frac: 0.5
+    multiple: 2.0
+
+  alpha_ghi_outer_wall:
+    frac: 0.0
+    multiple: 5.0
+  alpha_ghi_inner_wall:
+    frac: 0.0
+    multiple: 5.0
