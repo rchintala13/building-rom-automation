@@ -10,6 +10,22 @@ selection:
 dataset:
   history_hours: 6.0
 
+  # Train / validation / test splits as fractions of the full dataset
+  # (including the history window). Splits are taken in time order:
+  # the first `train` fraction goes to training, then `val`, then `test`.
+  #
+  # The history window is carved out of the start of the training portion,
+  # so train_steps = train_fraction * total_steps - history_steps.
+  #
+  # `val` is optional. If omitted or 0, candidate selection falls back to
+  # the test segment's objective.
+  #
+  # Fractions must sum to <= 1.0. Any trailing portion is discarded.
+  splits:
+    train: 0.7
+    val: 0.15
+    test: 0.15
+
 ekf:
   # 12 steps = 1 hour ahead prediction for 5-minute data
   n_steps_ahead: 12
@@ -21,54 +37,65 @@ ekf:
   # Measurement noise variance for indoor temperature [degC^2]
   r_value: 0.05
 
-  # Process noise covariance diagonal
-  # Order:
-  # [
-  #   T_in_C,
-  #   T_iw_C,
-  #   T_ow_C,
-  #   r_in_iw,
-  #   r_iw_ow,
-  #   r_ow_oa,
-  #   r_in_oa,
-  #   c_in,
-  #   c_w,
-  #   alpha_ghi_outer_wall,
-  #   alpha_ghi_inner_wall
-  # ]
+  
+  # ------------------------------------------------------------------
+  # Initial covariance construction
+  #
+  # P0 = diag(std_i^2)
+  #
+  # For temperatures:
+  #     std = fixed value
+  #
+  # For parameters:
+  #     std = ratio * initial_guess
+  #
+  # Example:
+  #
+  #     R_in_oa = 0.25 degC/kW
+  #     ratio = 0.30
+  #
+  #     std = 0.075
+  #     variance = 0.005625
+  #
+  # ------------------------------------------------------------------
 
-  q_diag:
-    - 1.0e-4   # T_in_C [degC^2]
-    - 1.0e-4   # T_iw_C [degC^2]
-    - 1.0e-4   # T_ow_C [degC^2]
+  p0:
 
-    - 1.0e-7   # r_in_iw [degC / kW]
-    - 1.0e-7   # r_iw_ow [degC / kW]
-    - 1.0e-7   # r_ow_oa [degC / kW]
-    - 1.0e-7   # r_in_oa [degC / kW]
+    temperature_std_c:
 
-    - 1.0e2    # c_in [kWh / degC]
-    - 1.0e2    # c_w [kWh / degC]
+      t_in_c: 0.5
+      t_iw_c: 2.0
+      t_ow_c: 2.0
 
-    - 1.0e-5   # alpha_ghi_outer_wall [(kW solar absorbed) / (kW/m2 GHI)]
-    - 1.0e-5   # alpha_ghi_inner_wall [(kW solar absorbed) / (kW/m2 GHI)]
+    resistance_std_ratio: 0.30
 
-  # Initial covariance diagonal
-  p0_diag:
-    - 1.0      # T_in_C [degC]
-    - 1.0      # T_iw_C [degC]
-    - 1.0      # T_ow_C [degC]
+    capacitance_std_ratio: 0.50
 
-    - 1.0e-2   # r_in_iw [degC / kW]
-    - 1.0e-2   # r_iw_ow [degC / kW]
-    - 1.0e-2   # r_ow_oa [degC / kW]
-    - 1.0e-2   # r_in_oa [degC / kW]
+    alpha_std_ratio: 0.50
 
-    - 1.0e4    # c_in [kWh / degC]
-    - 1.0e4    # c_w [kWh / degC]
+    alpha_std_floor: 0.02
 
-    - 0.1      # alpha_ghi_outer_wall [(kW solar absorbed) / (kW/m2 GHI)]
-    - 0.1      # alpha_ghi_inner_wall [(kW solar absorbed) / (kW/m2 GHI)]
+  # ------------------------------------------------------------------
+  # Process noise
+  #
+  # Q affects only temperature states.
+  #
+  # Q is generated using:
+  #
+  #     Q = V M V^T
+  #
+  # where M represents uncertainty in
+  # unmodeled heat gains [kW]
+  #
+  # ------------------------------------------------------------------
+
+  process_noise:
+
+    q_in_std_kw: 0.25
+
+    q_iw_std_kw: 0.10
+
+    q_ow_std_kw: 0.10
 
 parameter_grid:
 
