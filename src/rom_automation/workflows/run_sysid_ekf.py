@@ -9,22 +9,26 @@ import pandas as pd
 
 from rom_automation.logging_utils import get_logger
 from rom_automation.models.types import FourR2CParameters
-from rom_automation.sysid.dataset_adapter import build_sysid_dataset
+from rom_automation.sysid.config_types import SysIDConfig
+from rom_automation.sysid.dataset_adapter import (
+    DatasetSegment,
+    SysIDSplitDataset,
+    build_sysid_split_dataset,
+)
 from rom_automation.sysid.ekf import AugmentedStateIndex
-from rom_automation.sysid.parameter_grid import ParameterCandidateGrid
-from rom_automation.sysid.trainer import EKFNoiseConfig, EKFSysIDTrainer
+from rom_automation.sysid.noise_builders import EKFNoiseConfig
+from rom_automation.sysid.trainer import (
+    CandidateQDiag,
+    CandidateSegmentPDiag,
+    EKFSysIDTrainer,
+    SegmentResult,
+)
 
 
 def run_sysid_ekf_workflow(
     processed_csv_path: str | Path,
     output_dir: str | Path,
-    history_hours: float,
-    parameter_grid_dict: dict,
-    q_diag: list[float],
-    r_value: float,
-    p0_diag: list[float],
-    n_steps_ahead: int,
-    objective_weights: tuple[float, float] = (0.3, 0.7),
+    cfg: SysIDConfig,
 ) -> None:
     """
     Run end-to-end EKF-based system identification from one processed CSV.
@@ -35,20 +39,8 @@ def run_sysid_ekf_workflow(
         Path to processed CSV, typically processed_5min.csv.
     output_dir
         Directory where sysid results will be written.
-    history_hours
-        Hours of prior data used to initialize wall temperatures.
-    parameter_grid_dict
-        Dict of candidate lists for ParameterCandidateGrid.
-    q_diag
-        Diagonal entries for EKF process noise covariance Q.
-    r_value
-        Scalar measurement noise variance for R.
-    p0_diag
-        Diagonal entries for initial covariance P0.
-    n_steps_ahead
-        Horizon for n-step-ahead RMSE.
-    objective_weights
-        Weights for one-step and n-step RMSE in model selection.
+    cfg
+        Strongly-typed sysid configuration (see config_types.SysIDConfig).
     """
     processed_csv_path = Path(processed_csv_path)
     output_dir = Path(output_dir)
@@ -65,76 +57,89 @@ def run_sysid_ekf_workflow(
     logger.info("Reading processed CSV: %s", processed_csv_path)
     df = pd.read_csv(processed_csv_path, parse_dates=["timestamp"], index_col="timestamp")
 
-    timestep_seconds = _detect_timestep_seconds(df.index)
-    logger.info("Detected timestep: %s seconds", timestep_seconds)
-
-    dataset = build_sysid_dataset(
+    split_dataset = build_sysid_split_dataset(
         df=df,
-        history_hours=history_hours,
+        history_hours=cfg.dataset.history_hours,
+        train_fraction=cfg.dataset.splits.train,
+        val_fraction=cfg.dataset.splits.val,
+        test_fraction=cfg.dataset.splits.test,
     )
+    timestep_seconds = split_dataset.timestep_seconds
+    logger.info("Detected timestep: %s seconds", timestep_seconds)
     logger.info(
-        "Built sysid dataset with %d segment steps and %d history steps.",
-        len(dataset.inputs),
-        len(dataset.history_t_in_c),
+        "Built split dataset: history=%d, train=%d, val=%d, test=%d steps.",
+        len(split_dataset.history_t_in_c),
+        len(split_dataset.train.inputs),
+        len(split_dataset.val.inputs) if split_dataset.val is not None else 0,
+        len(split_dataset.test.inputs),
     )
-
-    parameter_grid = ParameterCandidateGrid(**parameter_grid_dict)
 
     state_index = AugmentedStateIndex()
-    n_aug = state_index.n_states
-
-    if len(q_diag) != n_aug:
-        raise ValueError(f"q_diag must have length {n_aug}, got {len(q_diag)}")
-
-    if len(p0_diag) != n_aug:
-        raise ValueError(f"p0_diag must have length {n_aug}, got {len(p0_diag)}")
 
     ekf_noise_config = EKFNoiseConfig(
-        q=np.diag(np.asarray(q_diag, dtype=float)),
-        r=np.array([[float(r_value)]], dtype=float),
-        p0=np.diag(np.asarray(p0_diag, dtype=float)),
+        r=np.array([[cfg.ekf.r_value]], dtype=float),
+        p0_spec=cfg.ekf.p0,
+        process_noise_spec=cfg.ekf.process_noise,
     )
 
     trainer = EKFSysIDTrainer(
         ekf_noise_config=ekf_noise_config,
         state_index=state_index,
-        objective_weights=objective_weights,
+        objective_weights=(
+            cfg.ekf.objective_weights.one_step,
+            cfg.ekf.objective_weights.n_step,
+        ),
     )
 
     logger.info("Starting EKF sysid training.")
     result = trainer.train(
-        parameter_grid=parameter_grid,
-        inputs=dataset.inputs,
-        measurements_t_in_c=dataset.measurements_t_in_c,
-        history_t_oa_c=dataset.history_t_oa_c,
-        history_t_in_c=dataset.history_t_in_c,
-        dt_seconds=timestep_seconds,
-        n_steps_ahead=n_steps_ahead,
+        parameter_grid=cfg.parameter_grid,
+        split_dataset=split_dataset,
+        n_steps_ahead=cfg.ekf.n_steps_ahead,
+        bound_fractions=cfg.parameter_bounds,
     )
     logger.info("Finished EKF sysid training.")
 
     final_identified_parameters = extract_final_identified_parameters(
-        z_filtered=result.best_ekf_result.z_filtered,
+        z_filtered=result.best_train_segment.ekf_result.z_filtered,
         state_index=state_index,
     )
 
+    selection_segment_name = "val" if result.best_val_segment is not None else "test"
+
     summary = {
         "processed_csv_path": str(processed_csv_path),
-        "history_hours": history_hours,
+        "history_hours": cfg.dataset.history_hours,
         "timestep_seconds": timestep_seconds,
-        "n_steps_ahead": n_steps_ahead,
+        "n_steps_ahead": cfg.ekf.n_steps_ahead,
         "objective_weights": {
-            "one_step": objective_weights[0],
-            "n_step": objective_weights[1],
+            "one_step": cfg.ekf.objective_weights.one_step,
+            "n_step": cfg.ekf.objective_weights.n_step,
         },
+        "splits": {
+            "train_fraction": cfg.dataset.splits.train,
+            "val_fraction": cfg.dataset.splits.val,
+            "test_fraction": cfg.dataset.splits.test,
+            "train_steps": len(split_dataset.train.inputs),
+            "val_steps": (
+                len(split_dataset.val.inputs) if split_dataset.val is not None else 0
+            ),
+            "test_steps": len(split_dataset.test.inputs),
+        },
+        "selection_segment": selection_segment_name,
         "n_candidates_evaluated": result.n_candidates_evaluated,
         "best_candidate_index": result.best_candidate_index,
-        "best_objective_value": result.best_objective_value,
+        "best_selection_objective": result.best_selection_objective,
         "best_metrics": {
-            "rmse_one_step_c": result.best_metrics.rmse_one_step_c,
-            "rmse_n_step_c": result.best_metrics.rmse_n_step_c,
+            "train": _metrics_to_dict(result.best_train_segment.metrics),
+            "val": (
+                _metrics_to_dict(result.best_val_segment.metrics)
+                if result.best_val_segment is not None
+                else None
+            ),
+            "test": _metrics_to_dict(result.best_test_segment.metrics),
         },
-        "best_initial_parameter_guess": asdict(result.best_parameters),
+        "best_initial_parameter_guess": asdict(result.best_initial_guess),
         "best_initial_state_result": {
             "alpha_iw": result.best_initial_state_result.alpha_iw,
             "alpha_ow": result.best_initial_state_result.alpha_ow,
@@ -158,26 +163,166 @@ def run_sysid_ekf_workflow(
     with summary_path.open("w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
 
+    model_path = output_dir / "model.json"
+    logger.info("Writing identified model parameters: %s", model_path)
+    model_payload = asdict(final_identified_parameters)
+    model_payload["init_alpha_iw"] = float(result.best_initial_state_result.alpha_iw)
+    model_payload["init_alpha_ow"] = float(result.best_initial_state_result.alpha_ow)
+    with model_path.open("w", encoding="utf-8") as f:
+        json.dump(model_payload, f, indent=2)
+
     filtered_states_path = output_dir / "ekf_filtered_augmented_states.csv"
     logger.info("Writing filtered augmented states: %s", filtered_states_path)
-    filtered_df = pd.DataFrame(
-        result.best_ekf_result.z_filtered,
-        columns=augmented_state_column_names(state_index),
+    filtered_df = _concat_filtered_states(
+        split_dataset=split_dataset,
+        train_segment=result.best_train_segment,
+        val_segment=result.best_val_segment,
+        test_segment=result.best_test_segment,
+        state_index=state_index,
     )
     filtered_df.to_csv(filtered_states_path, index=False)
 
     one_step_path = output_dir / "one_step_predictions.csv"
     logger.info("Writing one-step predictions: %s", one_step_path)
-    pred_df = pd.DataFrame(
-        {
-            "timestamp": dataset.timestamps,
-            "t_in_measured_c": dataset.measurements_t_in_c,
-            "t_in_pred_one_step_c": result.best_ekf_result.y_pred_one_step,
-        }
+    pred_df = _concat_one_step_predictions(
+        split_dataset=split_dataset,
+        train_segment=result.best_train_segment,
+        val_segment=result.best_val_segment,
+        test_segment=result.best_test_segment,
     )
     pred_df.to_csv(one_step_path, index=False)
 
+    p_diag_path = output_dir / "p_diagonals_last_candidate.csv"
+    logger.info(
+        "Writing P-diagonals for last candidate (%d segment records): %s",
+        len(result.last_p_diag_records),
+        p_diag_path,
+    )
+    p_diag_df = _build_p_diag_history_frame(
+        records=result.last_p_diag_records,
+        split_dataset=split_dataset,
+        state_index=state_index,
+    )
+    p_diag_df.to_csv(p_diag_path, index=False)
+
+    q_diag_path = output_dir / "q_diagonal_last_candidate.csv"
+    logger.info("Writing Q-diagonal for last candidate: %s", q_diag_path)
+    q_diag_df = _build_q_diag_frame(
+        record=result.last_q_diag_record,
+        state_index=state_index,
+    )
+    q_diag_df.to_csv(q_diag_path, index=False)
+
     logger.info("EKF sysid workflow complete.")
+
+
+def _metrics_to_dict(metrics) -> dict:
+    return {
+        "rmse_one_step_c": metrics.rmse_one_step_c,
+        "rmse_n_step_c": metrics.rmse_n_step_c,
+    }
+
+
+def _concat_filtered_states(
+    split_dataset: SysIDSplitDataset,
+    train_segment: SegmentResult,
+    val_segment: SegmentResult | None,
+    test_segment: SegmentResult,
+    state_index: AugmentedStateIndex,
+) -> pd.DataFrame:
+    columns = augmented_state_column_names(state_index)
+    frames: list[pd.DataFrame] = []
+
+    frames.append(
+        _segment_frame(
+            timestamps=split_dataset.train.timestamps,
+            z_filtered=train_segment.ekf_result.z_filtered,
+            columns=columns,
+            label="train",
+        )
+    )
+    if val_segment is not None:
+        assert split_dataset.val is not None
+        frames.append(
+            _segment_frame(
+                timestamps=split_dataset.val.timestamps,
+                z_filtered=val_segment.ekf_result.z_filtered,
+                columns=columns,
+                label="val",
+            )
+        )
+    frames.append(
+        _segment_frame(
+            timestamps=split_dataset.test.timestamps,
+            z_filtered=test_segment.ekf_result.z_filtered,
+            columns=columns,
+            label="test",
+        )
+    )
+
+    return pd.concat(frames, ignore_index=True)
+
+
+def _segment_frame(
+    timestamps: pd.DatetimeIndex,
+    z_filtered: np.ndarray,
+    columns: list[str],
+    label: str,
+) -> pd.DataFrame:
+    df = pd.DataFrame(z_filtered, columns=columns)
+    df.insert(0, "segment", label)
+    df.insert(1, "timestamp", list(timestamps))
+    return df
+
+
+def _concat_one_step_predictions(
+    split_dataset: SysIDSplitDataset,
+    train_segment: SegmentResult,
+    val_segment: SegmentResult | None,
+    test_segment: SegmentResult,
+) -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+
+    frames.append(
+        _one_step_frame(
+            label="train",
+            segment=split_dataset.train,
+            segment_result=train_segment,
+        )
+    )
+    if val_segment is not None:
+        assert split_dataset.val is not None
+        frames.append(
+            _one_step_frame(
+                label="val",
+                segment=split_dataset.val,
+                segment_result=val_segment,
+            )
+        )
+    frames.append(
+        _one_step_frame(
+            label="test",
+            segment=split_dataset.test,
+            segment_result=test_segment,
+        )
+    )
+
+    return pd.concat(frames, ignore_index=True)
+
+
+def _one_step_frame(
+    label: str,
+    segment: DatasetSegment,
+    segment_result: SegmentResult,
+) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "segment": label,
+            "timestamp": list(segment.timestamps),
+            "t_in_measured_c": segment.measurements_t_in_c,
+            "t_in_pred_one_step_c": segment_result.ekf_result.y_pred_one_step,
+        }
+    )
 
 
 def extract_final_identified_parameters(
@@ -220,12 +365,77 @@ def augmented_state_column_names(state_index: AugmentedStateIndex) -> list[str]:
     ]
 
 
-def _detect_timestep_seconds(index: pd.DatetimeIndex) -> float:
-    if not isinstance(index, pd.DatetimeIndex):
-        raise ValueError("Index must be a DatetimeIndex.")
+def _build_p_diag_history_frame(
+    records: list[CandidateSegmentPDiag],
+    split_dataset: SysIDSplitDataset,
+    state_index: AugmentedStateIndex,
+) -> pd.DataFrame:
+    """
+    Flatten the per-candidate P-diagonal records into one long-form DataFrame.
 
-    deltas = index.to_series().diff().dropna()
-    if deltas.empty:
-        raise ValueError("Cannot detect timestep from fewer than 2 timestamps.")
+    Each (candidate_index, segment) pair contributes n_steps rows. The state
+    diagonals are written one column per augmented state; the row ordering is:
+    all train rows for candidate 0, then val (if any), then test, then
+    candidate 1, and so on.
+    """
+    state_columns = augmented_state_column_names(state_index)
 
-    return float(deltas.mode().iloc[0].total_seconds())
+    segment_timestamps = {
+        "train": split_dataset.train.timestamps,
+        "val": split_dataset.val.timestamps if split_dataset.val is not None else None,
+        "test": split_dataset.test.timestamps,
+    }
+
+    frames: list[pd.DataFrame] = []
+
+    for record in records:
+        timestamps = segment_timestamps.get(record.segment)
+        if timestamps is None:
+            raise RuntimeError(
+                f"Got P-diag record for segment {record.segment!r} but no "
+                "matching segment in the split dataset."
+            )
+
+        if record.p_diag.shape[0] != len(timestamps):
+            raise RuntimeError(
+                f"P-diag shape {record.p_diag.shape} does not match "
+                f"{record.segment} timestamps length {len(timestamps)} "
+                f"for candidate {record.candidate_index}."
+            )
+
+        frame = pd.DataFrame(record.p_diag, columns=state_columns)
+        frame.insert(0, "candidate_index", record.candidate_index)
+        frame.insert(1, "segment", record.segment)
+        frame.insert(2, "timestamp", list(timestamps))
+        frames.append(frame)
+
+    if not frames:
+        return pd.DataFrame(columns=["candidate_index", "segment", "timestamp", *state_columns])
+
+    return pd.concat(frames, ignore_index=True)
+
+
+def _build_q_diag_frame(
+    record: CandidateQDiag,
+    state_index: AugmentedStateIndex,
+) -> pd.DataFrame:
+    """
+    Build a one-row DataFrame with the Q-diagonal entries for the last
+    candidate. Q is built once per candidate (constant across segments), so
+    a single row per candidate is sufficient.
+    """
+    state_columns = augmented_state_column_names(state_index)
+
+    if record.q_diag.shape != (len(state_columns),):
+        raise RuntimeError(
+            f"Q-diag shape {record.q_diag.shape} does not match expected "
+            f"({len(state_columns)},) for candidate {record.candidate_index}."
+        )
+
+    row = {"candidate_index": record.candidate_index}
+    for name, value in zip(state_columns, record.q_diag):
+        row[name] = float(value)
+
+    return pd.DataFrame([row])
+
+

@@ -80,6 +80,8 @@ class AugmentedStateEKF:
         z0: np.ndarray,
         p0: np.ndarray,
         dt_seconds: float,
+        z_lower: np.ndarray | None = None,
+        z_upper: np.ndarray | None = None,
     ) -> EKFResult:
         """
         Run EKF over a sequence.
@@ -96,6 +98,11 @@ class AugmentedStateEKF:
             Initial covariance, shape (11, 11).
         dt_seconds
             Discrete timestep in seconds.
+        z_lower, z_upper
+            Optional per-state lower/upper bounds, shape (11,). When provided,
+            the augmented state is clipped element-wise after each update step.
+            Use -inf / +inf for entries that should not be bounded
+            (e.g. temperatures).
 
         Returns
         -------
@@ -124,6 +131,23 @@ class AugmentedStateEKF:
                 f"Initial covariance must have shape {(n_states, n_states)}, got {p.shape}"
             )
 
+        bounds_active = z_lower is not None or z_upper is not None
+        if bounds_active:
+            if z_lower is None or z_upper is None:
+                raise ValueError("z_lower and z_upper must both be provided together.")
+
+            z_lower = np.asarray(z_lower, dtype=float).reshape(-1)
+            z_upper = np.asarray(z_upper, dtype=float).reshape(-1)
+
+            if z_lower.shape != (n_states,) or z_upper.shape != (n_states,):
+                raise ValueError(
+                    f"z_lower and z_upper must have shape ({n_states},), "
+                    f"got {z_lower.shape} and {z_upper.shape}."
+                )
+
+            if np.any(z_lower > z_upper):
+                raise ValueError("z_lower must be <= z_upper element-wise.")
+
         z_filtered = np.zeros((n_steps, n_states), dtype=float)
         p_filtered = np.zeros((n_steps, n_states, n_states), dtype=float)
         y_pred_one_step = np.zeros(n_steps, dtype=float)
@@ -148,6 +172,9 @@ class AugmentedStateEKF:
 
             z = z_pred + (k_gain @ innovation).reshape(-1)
             p = (np.eye(n_states) - k_gain @ h_jac) @ p_pred
+
+            if bounds_active:
+                z = np.clip(z, z_lower, z_upper)
 
             z_filtered[k, :] = z
             p_filtered[k, :, :] = p
@@ -209,7 +236,7 @@ class AugmentedStateEKF:
         z: np.ndarray,
         u: FourR2CInput,
         dt_seconds: float,
-        eps: float = 1e-6,
+        eps: float = 1e-3,
     ) -> np.ndarray:
         """
         Finite-difference Jacobian of the augmented transition function.

@@ -28,7 +28,7 @@ dataset:
 
 ekf:
   # 12 steps = 1 hour ahead prediction for 5-minute data
-  n_steps_ahead: 12
+  n_steps_ahead: 6
 
   objective_weights:
     one_step: 0.3
@@ -107,24 +107,16 @@ parameter_grid:
   # - higher R => better insulation
 
   r_in_iw:
-    - 0.01
-    - 0.05
-    - 0.10
+    - 0.5
 
   r_iw_ow:
-    - 0.05
-    - 0.10
-    - 0.20
+    - 0.4
 
   r_ow_oa:
-    - 0.10
-    - 0.25
-    - 0.50
+    - 0.5
 
   r_in_oa:
-    - 0.10
-    - 0.25
-    - 0.50
+    - 1.5
 
   # Thermal capacitances
   # Units: [kWh / degC]
@@ -139,14 +131,10 @@ parameter_grid:
   #       c_ow = c_w / 2
 
   c_in:
-    - 0.5
-    - 1.0
-    - 2.0
+    - 7.5
 
   c_w:
     - 10.0
-    - 25.0
-    - 50.0
 
   # Solar gain scaling coefficients
   #
@@ -162,16 +150,11 @@ parameter_grid:
   # - effective solar coupling
 
   alpha_ghi_outer_wall:
-    - 0.00
-    - 0.05
     - 0.10
-    - 0.20
 
   alpha_ghi_inner_wall:
-    - 0.00
     - 0.05
     - 0.10
-    - 0.20
 
 # Per-parameter bounds applied during EKF updates.
 #

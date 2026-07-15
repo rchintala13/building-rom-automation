@@ -87,7 +87,7 @@ class FourR2CInput:
     Units
     -----
     t_oa_c       : degC
-    g_ghi_w_m2   : W/m2
+    g_ghi_kw_m2   : W/m2
     p_int_kw     : kW
     p_sol_win_kw : kW
     p_hvac_kw    : kW
@@ -98,7 +98,7 @@ class FourR2CInput:
     """
 
     t_oa_c: float
-    g_ghi_w_m2: float
+    g_ghi_kw_m2: float
     p_int_kw: float
     p_sol_win_kw: float
     p_hvac_kw: float
@@ -107,7 +107,7 @@ class FourR2CInput:
         return np.array(
             [
                 self.t_oa_c,
-                self.g_ghi_w_m2,
+                self.g_ghi_kw_m2,
                 self.p_int_kw,
                 self.p_sol_win_kw,
                 self.p_hvac_kw,
@@ -124,7 +124,7 @@ class FourR2CInput:
 
         return cls(
             t_oa_c=float(u[0]),
-            g_ghi_w_m2=float(u[1]),
+            g_ghi_kw_m2=float(u[1]),
             p_int_kw=float(u[2]),
             p_sol_win_kw=float(u[3]),
             p_hvac_kw=float(u[4]),
