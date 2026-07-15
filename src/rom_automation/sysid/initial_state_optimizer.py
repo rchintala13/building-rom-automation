@@ -47,7 +47,7 @@ class InitialStateOptimizer:
         history_t_in_c: np.ndarray,
         dt_seconds: float,
         x0: tuple[float, float] | None = None,
-        bounds: tuple[tuple[float, float], tuple[float, float]] = ((-3.5, 4.5), (-3.5, 4.5)),
+        bounds: tuple[tuple[float, float], tuple[float, float]] = ((-1.5, 2.5), (-1.5, 2.5)),
         method: str = "L-BFGS-B",
     ) -> InitialStateOptimizationResult:
         """

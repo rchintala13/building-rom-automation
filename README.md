@@ -98,11 +98,46 @@ python -m rom_automation.cli.process_energyplus_outputs \
 
 ### Run EKF System Identification
 
-Runs EKF-based 4R2C system identification on a processed training CSV. The EKF is run over a parameter grid; the best-fit thermal parameters (R, C, solar gain coefficients) are saved to `output_dir` along with evaluation metrics.
+Runs EKF-based 4R2C system identification on a processed training CSV. For each candidate in the parameter grid, the workflow:
 
-The config file specifies the input CSV path, output directory, EKF tuning parameters (`q_diag`, `r_value`, `p0_diag`), prediction horizon (`n_steps_ahead`), and the parameter grid to search over.
+1. Splits the dataset into train / (optional) val / test segments (`dataset.splits`).
+2. Runs a two-pass augmented-state EKF on training (the second pass re-optimizes wall initial conditions using the parameters identified by the first pass — see `refine_initial_state`).
+3. Freezes parameters at their end-of-train values and continues the filter on val and test for held-out evaluation.
+4. Scores the candidate by RMSE on the validation segment (or test, if no val).
+
+The config file specifies dataset splits, per-candidate P0 construction (`ekf.p0`, from temperature stds + per-parameter ratios), process-noise Q construction (`ekf.process_noise`, from heat-gain stds), per-parameter clip bounds (`parameter_bounds`), prediction horizon (`ekf.n_steps_ahead`), and the parameter grid.
+
+Outputs are written to `data/processed/sysid_results/<city>/<house>/`:
+
+| File | Contents |
+|------|----------|
+| `sysid_summary.json` | Best candidate, per-segment metrics, identified parameters |
+| `model.json` | Identified 4R2C parameters plus wall-init alphas (consumed by the simulation workflow) |
+| `ekf_filtered_augmented_states.csv` | Filtered augmented state trajectory across all segments |
+| `one_step_predictions.csv` | One-step predictions vs. measurements across all segments |
+| `p_diagonals_last_candidate.csv` | EKF covariance diagonals per timestep for the last candidate |
+| `q_diagonal_last_candidate.csv` | Process-noise covariance diagonal for the last candidate |
 
 ```bash
 python -m rom_automation.cli.run_sysid_ekf \
     --config configs/sysid/run_ekf_sysid.yaml
+```
+
+### Run 4R2C Simulation / Prediction
+
+Runs the identified 4R2C model against real or custom input drivers, in one of three modes. Consumes the `model.json` produced by the sysid workflow.
+
+| Mode (`mode.kind`) | Output columns |
+|--------------------|---------------|
+| `simulation` | `timestamp, t_in_pred_c, t_iw_pred_c, t_ow_pred_c` — open-loop rollout |
+| `one_step` | `timestamp, t_in_measured_c, t_in_pred_one_step_c` — reset T_in each step, predict k+1 |
+| `n_step` | `timestamp, t_in_measured_c, t_in_pred_n_step_<N>_c` — reset T_in each step, predict k+N |
+
+The config's `inputs.source` selects between `processed` (reads `processed_5min.csv` for the selected city/house) or `custom` (any CSV with the same schema — must include `T_zone_C` for the one-step and n-step modes). The `window` section slices the input CSV into `[start, start + duration_hours)`, and `history_hours` of prior data is used to initialize wall temperatures via `alpha_iw` / `alpha_ow`. If the YAML omits the `wall_init` section, the workflow falls back to the identified alphas stored in `model.json`.
+
+Outputs are written to `data/processed/sim_results/<city>/<house>/<mode>_<YYYYMMDDTHHMM>.csv` alongside a `simulation_summary.json` capturing the run metadata, resolved wall-init source, and model parameters used.
+
+```bash
+python -m rom_automation.cli.run_4r2c_simulation \
+    --config configs/simulation/run_4r2c_simulation.yaml
 ```

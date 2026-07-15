@@ -25,7 +25,7 @@ inputs:
 # [start, start + duration_hours) and requires `history_hours` of data
 # immediately before `start` for wall temperature initialization.
 window:
-  start: "2015-01-01T00:00:00"
+  start: "2018-08-02T00:00:05"
   duration_hours: 24
 
 # Hours of prior data used to compute mean(T_oa) and mean(T_in) for
@@ -41,9 +41,9 @@ history_hours: 6.0
 # Optional. If this section is omitted, the workflow uses `init_alpha_iw`
 # and `init_alpha_ow` from model.json (written by the sysid workflow).
 # Include this section to override those identified defaults.
-wall_init:
-  alpha_iw: 0.2   # inner wall closer to indoor air
-  alpha_ow: 0.7   # outer wall closer to outdoor air
+# wall_init:
+#   alpha_iw: 0.2   # inner wall closer to indoor air
+#   alpha_ow: 0.7   # outer wall closer to outdoor air
 
 # Prediction mode.
 #   kind: "simulation" -> open-loop rollout from the initial state.
