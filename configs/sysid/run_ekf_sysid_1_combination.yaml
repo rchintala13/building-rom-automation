@@ -1,0 +1,199 @@
+paths:
+  raw_idf_root: "data/raw/resstock_idfs"
+  processed_root: "data/processed/training_data"
+  output_root: "data/processed/sysid_results"
+
+selection:
+  city: "Denver"       # must match a subfolder in raw_idf_root
+  house_name: "58103"  # must match an IDF filename (without extension) in that city folder
+
+dataset:
+  history_hours: 6.0
+
+  # Train / validation / test splits as fractions of the full dataset
+  # (including the history window). Splits are taken in time order:
+  # the first `train` fraction goes to training, then `val`, then `test`.
+  #
+  # The history window is carved out of the start of the training portion,
+  # so train_steps = train_fraction * total_steps - history_steps.
+  #
+  # `val` is optional. If omitted or 0, candidate selection falls back to
+  # the test segment's objective.
+  #
+  # Fractions must sum to <= 1.0. Any trailing portion is discarded.
+  splits:
+    train: 0.7
+    val: 0.15
+    test: 0.15
+
+ekf:
+  # 12 steps = 1 hour ahead prediction for 5-minute data
+  n_steps_ahead: 6
+
+  objective_weights:
+    one_step: 0.3
+    n_step: 0.7
+
+  # Measurement noise variance for indoor temperature [degC^2]
+  r_value: 0.05
+
+  
+  # ------------------------------------------------------------------
+  # Initial covariance construction
+  #
+  # P0 = diag(std_i^2)
+  #
+  # For temperatures:
+  #     std = fixed value
+  #
+  # For parameters:
+  #     std = ratio * initial_guess
+  #
+  # Example:
+  #
+  #     R_in_oa = 0.25 degC/kW
+  #     ratio = 0.30
+  #
+  #     std = 0.075
+  #     variance = 0.005625
+  #
+  # ------------------------------------------------------------------
+
+  p0:
+
+    temperature_std_c:
+
+      t_in_c: 0.5
+      t_iw_c: 2.0
+      t_ow_c: 2.0
+
+    resistance_std_ratio: 0.30
+
+    capacitance_std_ratio: 0.50
+
+    alpha_std_ratio: 0.50
+
+    alpha_std_floor: 0.02
+
+  # ------------------------------------------------------------------
+  # Process noise
+  #
+  # Q affects only temperature states.
+  #
+  # Q is generated using:
+  #
+  #     Q = V M V^T
+  #
+  # where M represents uncertainty in
+  # unmodeled heat gains [kW]
+  #
+  # ------------------------------------------------------------------
+
+  process_noise:
+
+    q_in_std_kw: 0.25
+
+    q_iw_std_kw: 0.10
+
+    q_ow_std_kw: 0.10
+
+parameter_grid:
+
+  # Thermal resistances
+  # Units: [degC / kW]
+  #
+  # Typical residential-scale ranges:
+  # - lower R => faster heat transfer
+  # - higher R => better insulation
+
+  r_in_iw:
+    - 0.5
+
+  r_iw_ow:
+    - 0.4
+
+  r_ow_oa:
+    - 0.5
+
+  r_in_oa:
+    - 1.5
+
+  # Thermal capacitances
+  # Units: [kWh / degC]
+  #
+  # c_in:
+  #   indoor air effective capacitance
+  #
+  # c_w:
+  #   total wall capacitance
+  #   internally split as:
+  #       c_iw = c_w / 2
+  #       c_ow = c_w / 2
+
+  c_in:
+    - 7.5
+
+  c_w:
+    - 10.0
+
+  # Solar gain scaling coefficients
+  #
+  # GHI input units:
+  #   [kW / m2]
+  #
+  # Alpha units:
+  #   [(kW absorbed solar gain) / (kW/m2 incident GHI)]
+  #
+  # These effectively absorb:
+  # - wall area
+  # - absorptivity
+  # - effective solar coupling
+
+  alpha_ghi_outer_wall:
+    - 0.10
+
+  alpha_ghi_inner_wall:
+    - 0.05
+    - 0.10
+
+# Per-parameter bounds applied during EKF updates.
+#
+# For each candidate run, the parameter component of the augmented state is
+# clipped after every EKF update to:
+#
+#     [frac * initial_guess, multiple * initial_guess]
+#
+# where `initial_guess` is the candidate value drawn from `parameter_grid`.
+#
+# Notes:
+# - If frac == multiple, the parameter is effectively frozen at the initial guess.
+# - For alpha_* candidates that include 0.0, both bounds collapse to 0 for that
+#   candidate (since frac * 0 == multiple * 0 == 0), freezing the parameter.
+
+parameter_bounds:
+  r_in_iw:
+    frac: 0.5
+    multiple: 2.0
+  r_iw_ow:
+    frac: 0.5
+    multiple: 2.0
+  r_ow_oa:
+    frac: 0.5
+    multiple: 2.0
+  r_in_oa:
+    frac: 0.5
+    multiple: 2.0
+
+  c_in:
+    frac: 0.5
+    multiple: 2.0
+  c_w:
+    frac: 0.5
+    multiple: 2.0
+
+  alpha_ghi_outer_wall:
+    frac: 0.0
+    multiple: 5.0
+  alpha_ghi_inner_wall:
+    frac: 0.0
+    multiple: 5.0

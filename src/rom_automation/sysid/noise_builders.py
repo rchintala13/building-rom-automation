@@ -113,7 +113,7 @@ def build_p0_from_ratios(
         std[j] = resistance_std_ratio * abs(z0[j])
 
     for j in [idx.c_in, idx.c_w]:
-        std[j] = capacitance_std_ratio * abs(z0[j])
+        std[j] = 10 * capacitance_std_ratio * abs(z0[j])
 
     for j in [idx.alpha_ghi_outer_wall, idx.alpha_ghi_inner_wall]:
         std[j] = max(alpha_std_floor, alpha_std_ratio * abs(z0[j]))
@@ -182,7 +182,7 @@ def build_q_from_process_noise(
         dtype=float,
     )
 
-    v_temp = dt_seconds * np.diag(inv_c)
+    v_temp = (1./1000) * dt_seconds * np.diag(inv_c)
     m = np.diag(
         np.array(
             [q_in_std_kw**2, q_iw_std_kw**2, q_ow_std_kw**2],

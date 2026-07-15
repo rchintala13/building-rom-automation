@@ -18,6 +18,8 @@ from rom_automation.sysid.dataset_adapter import (
 from rom_automation.sysid.ekf import AugmentedStateIndex
 from rom_automation.sysid.noise_builders import EKFNoiseConfig
 from rom_automation.sysid.trainer import (
+    CandidateQDiag,
+    CandidateSegmentPDiag,
     EKFSysIDTrainer,
     SegmentResult,
 )
@@ -161,6 +163,14 @@ def run_sysid_ekf_workflow(
     with summary_path.open("w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
 
+    model_path = output_dir / "model.json"
+    logger.info("Writing identified model parameters: %s", model_path)
+    model_payload = asdict(final_identified_parameters)
+    model_payload["init_alpha_iw"] = float(result.best_initial_state_result.alpha_iw)
+    model_payload["init_alpha_ow"] = float(result.best_initial_state_result.alpha_ow)
+    with model_path.open("w", encoding="utf-8") as f:
+        json.dump(model_payload, f, indent=2)
+
     filtered_states_path = output_dir / "ekf_filtered_augmented_states.csv"
     logger.info("Writing filtered augmented states: %s", filtered_states_path)
     filtered_df = _concat_filtered_states(
@@ -181,6 +191,27 @@ def run_sysid_ekf_workflow(
         test_segment=result.best_test_segment,
     )
     pred_df.to_csv(one_step_path, index=False)
+
+    p_diag_path = output_dir / "p_diagonals_last_candidate.csv"
+    logger.info(
+        "Writing P-diagonals for last candidate (%d segment records): %s",
+        len(result.last_p_diag_records),
+        p_diag_path,
+    )
+    p_diag_df = _build_p_diag_history_frame(
+        records=result.last_p_diag_records,
+        split_dataset=split_dataset,
+        state_index=state_index,
+    )
+    p_diag_df.to_csv(p_diag_path, index=False)
+
+    q_diag_path = output_dir / "q_diagonal_last_candidate.csv"
+    logger.info("Writing Q-diagonal for last candidate: %s", q_diag_path)
+    q_diag_df = _build_q_diag_frame(
+        record=result.last_q_diag_record,
+        state_index=state_index,
+    )
+    q_diag_df.to_csv(q_diag_path, index=False)
 
     logger.info("EKF sysid workflow complete.")
 
@@ -332,5 +363,79 @@ def augmented_state_column_names(state_index: AugmentedStateIndex) -> list[str]:
         "alpha_ghi_outer_wall",
         "alpha_ghi_inner_wall",
     ]
+
+
+def _build_p_diag_history_frame(
+    records: list[CandidateSegmentPDiag],
+    split_dataset: SysIDSplitDataset,
+    state_index: AugmentedStateIndex,
+) -> pd.DataFrame:
+    """
+    Flatten the per-candidate P-diagonal records into one long-form DataFrame.
+
+    Each (candidate_index, segment) pair contributes n_steps rows. The state
+    diagonals are written one column per augmented state; the row ordering is:
+    all train rows for candidate 0, then val (if any), then test, then
+    candidate 1, and so on.
+    """
+    state_columns = augmented_state_column_names(state_index)
+
+    segment_timestamps = {
+        "train": split_dataset.train.timestamps,
+        "val": split_dataset.val.timestamps if split_dataset.val is not None else None,
+        "test": split_dataset.test.timestamps,
+    }
+
+    frames: list[pd.DataFrame] = []
+
+    for record in records:
+        timestamps = segment_timestamps.get(record.segment)
+        if timestamps is None:
+            raise RuntimeError(
+                f"Got P-diag record for segment {record.segment!r} but no "
+                "matching segment in the split dataset."
+            )
+
+        if record.p_diag.shape[0] != len(timestamps):
+            raise RuntimeError(
+                f"P-diag shape {record.p_diag.shape} does not match "
+                f"{record.segment} timestamps length {len(timestamps)} "
+                f"for candidate {record.candidate_index}."
+            )
+
+        frame = pd.DataFrame(record.p_diag, columns=state_columns)
+        frame.insert(0, "candidate_index", record.candidate_index)
+        frame.insert(1, "segment", record.segment)
+        frame.insert(2, "timestamp", list(timestamps))
+        frames.append(frame)
+
+    if not frames:
+        return pd.DataFrame(columns=["candidate_index", "segment", "timestamp", *state_columns])
+
+    return pd.concat(frames, ignore_index=True)
+
+
+def _build_q_diag_frame(
+    record: CandidateQDiag,
+    state_index: AugmentedStateIndex,
+) -> pd.DataFrame:
+    """
+    Build a one-row DataFrame with the Q-diagonal entries for the last
+    candidate. Q is built once per candidate (constant across segments), so
+    a single row per candidate is sufficient.
+    """
+    state_columns = augmented_state_column_names(state_index)
+
+    if record.q_diag.shape != (len(state_columns),):
+        raise RuntimeError(
+            f"Q-diag shape {record.q_diag.shape} does not match expected "
+            f"({len(state_columns)},) for candidate {record.candidate_index}."
+        )
+
+    row = {"candidate_index": record.candidate_index}
+    for name, value in zip(state_columns, record.q_diag):
+        row[name] = float(value)
+
+    return pd.DataFrame([row])
 
 

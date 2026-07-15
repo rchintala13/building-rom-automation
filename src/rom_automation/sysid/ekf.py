@@ -236,7 +236,7 @@ class AugmentedStateEKF:
         z: np.ndarray,
         u: FourR2CInput,
         dt_seconds: float,
-        eps: float = 1e-6,
+        eps: float = 1e-3,
     ) -> np.ndarray:
         """
         Finite-difference Jacobian of the augmented transition function.

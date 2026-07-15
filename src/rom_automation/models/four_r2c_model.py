@@ -49,9 +49,28 @@ class FourR2CModel:
     - Positive p_hvac_kw means net heating added to the zone.
     """
 
-    def __init__(self, params: FourR2CParameters) -> None:
+    def __init__(
+        self,
+        params: FourR2CParameters,
+        discretization: str = "zoh",
+    ) -> None:
+        """
+        Parameters
+        ----------
+        params
+            4R2C physical parameters.
+        discretization
+            Discretization scheme used by `discretize()` and `step()`.
+            Options:
+              - "zoh"           : exact zero-order hold via matrix exponential.
+              - "forward_euler" : first-order Euler, `A_d = I + A*dt`,
+                                  `B_d = B*dt`. Cheaper (no expm) but only
+                                  stable if `dt < 2 / max|eig(A)|`.
+        """
         self.params = params
+        self.discretization = discretization
         self._validate_parameters()
+        self._validate_discretization()
 
     def continuous_state_matrix(self) -> np.ndarray:
         """
@@ -157,13 +176,48 @@ class FourR2CModel:
 
         return a @ x + b @ u
 
-    def discretize(self, dt_seconds: float) -> DiscreteLinearModel:
+    def discretize(
+        self,
+        dt_seconds: float,
+        method: str | None = None,
+    ) -> DiscreteLinearModel:
         """
-        Exact zero-order-hold discretization over dt_seconds.
+        Discretize the continuous-time model.
+
+        Parameters
+        ----------
+        dt_seconds
+            Discretization step in seconds. Must be positive. Converted
+            internally to hours because the continuous-time A and B matrices
+            are dimensioned in 1/hour (R in degC/kW, C in kWh/degC).
+        method
+            Discretization scheme:
+              - "zoh"           : exact zero-order hold via matrix exponential.
+              - "forward_euler" : first-order Euler approximation.
+            If None (default), uses the model's `discretization` attribute set
+            at construction time.
         """
         if dt_seconds <= 0:
             raise ValueError(f"dt_seconds must be positive. Got {dt_seconds}.")
 
+        dt_hours = dt_seconds / 3600.0
+
+        chosen = method if method is not None else self.discretization
+        if chosen == "zoh":
+            return self._discretize_zoh(dt_hours)
+        if chosen == "forward_euler":
+            return self._discretize_forward_euler(dt_hours)
+        raise ValueError(
+            f"Unknown discretization method: {chosen!r}. "
+            "Must be 'zoh' or 'forward_euler'."
+        )
+
+    def _discretize_zoh(self, dt_hours: float) -> DiscreteLinearModel:
+        """
+        Exact zero-order-hold discretization via `expm` on the augmented
+        [[A, B], [0, 0]] block matrix. A and B are in 1/hour, so dt is in
+        hours to keep the exponent dimensionless.
+        """
         a = self.continuous_state_matrix()
         b = self.continuous_input_matrix()
         c = self.measurement_matrix()
@@ -175,10 +229,37 @@ class FourR2CModel:
         aug[:n_states, :n_states] = a
         aug[:n_states, n_states:] = b
 
-        exp_aug = expm(aug * dt_seconds)
+        exp_aug = expm(aug * dt_hours)
 
         a_d = exp_aug[:n_states, :n_states]
         b_d = exp_aug[:n_states, n_states:]
+
+        return DiscreteLinearModel(a_d=a_d, b_d=b_d, c=c)
+
+    def _discretize_forward_euler(
+        self,
+        dt_hours: float,
+    ) -> DiscreteLinearModel:
+        """
+        First-order Euler discretization:
+
+            A_d = I + A * dt
+            B_d = B * dt
+
+        A and B are in 1/hour, so dt is in hours to keep A_d entries
+        dimensionless. Stability requires dt < 2 / max|eig(A)|; for typical
+        residential thermal time constants (hours) and a 5-min step
+        (dt = 1/12 h), this holds comfortably. Cheaper than ZOH (no `expm`)
+        but less accurate for stiff systems or large dt.
+        """
+        a = self.continuous_state_matrix()
+        b = self.continuous_input_matrix()
+        c = self.measurement_matrix()
+
+        n_states = a.shape[0]
+
+        a_d = np.eye(n_states, dtype=float) + a * dt_hours
+        b_d = b * dt_hours
 
         return DiscreteLinearModel(a_d=a_d, b_d=b_d, c=c)
 
@@ -189,7 +270,8 @@ class FourR2CModel:
         dt_seconds: float,
     ) -> FourR2CState:
         """
-        Propagate the model one discrete step forward using exact ZOH discretization.
+        Propagate the model one discrete step forward using the model's
+        configured discretization method.
         """
         disc = self.discretize(dt_seconds)
 
@@ -269,4 +351,12 @@ class FourR2CModel:
             raise ValueError(
                 f"Derived wall capacitances must be positive. "
                 f"Got c_iw={p.c_iw}, c_ow={p.c_ow}."
+            )
+
+    def _validate_discretization(self) -> None:
+        allowed = {"zoh", "forward_euler"}
+        if self.discretization not in allowed:
+            raise ValueError(
+                f"discretization must be one of {sorted(allowed)}. "
+                f"Got {self.discretization!r}."
             )

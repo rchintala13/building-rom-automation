@@ -1,0 +1,71 @@
+{
+  "processed_csv_path": "data\\processed\\training_data\\Denver\\58103__edited\\processed_5min.csv",
+  "history_hours": 6.0,
+  "timestep_seconds": 300.0,
+  "n_steps_ahead": 6,
+  "objective_weights": {
+    "one_step": 0.3,
+    "n_step": 0.7
+  },
+  "splits": {
+    "train_fraction": 0.7,
+    "val_fraction": 0.15,
+    "test_fraction": 0.15,
+    "train_steps": 6177,
+    "val_steps": 1339,
+    "test_steps": 1339
+  },
+  "selection_segment": "val",
+  "n_candidates_evaluated": 2,
+  "best_candidate_index": 1,
+  "best_selection_objective": 0.830127092238619,
+  "best_metrics": {
+    "train": {
+      "rmse_one_step_c": 0.670377585491599,
+      "rmse_n_step_c": 0.7344240954210692
+    },
+    "val": {
+      "rmse_one_step_c": 0.7828535609394851,
+      "rmse_n_step_c": 0.8503871770811051
+    },
+    "test": {
+      "rmse_one_step_c": 0.8738429806183637,
+      "rmse_n_step_c": 0.9507741105089011
+    }
+  },
+  "best_initial_parameter_guess": {
+    "r_in_iw": 0.5,
+    "r_iw_ow": 0.4,
+    "r_ow_oa": 0.5,
+    "r_in_oa": 1.5,
+    "c_in": 7.5,
+    "c_w": 10.0,
+    "alpha_ghi_outer_wall": 0.1,
+    "alpha_ghi_inner_wall": 0.1
+  },
+  "best_initial_state_result": {
+    "alpha_iw": -1.5,
+    "alpha_ow": -1.5,
+    "t_oa_hist_mean_c": 18.609722222222224,
+    "t_in_hist_mean_c": 20.339744916926616,
+    "objective_value": 2.4534639465332777,
+    "success": true,
+    "message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+    "n_iterations": 2,
+    "initial_condition": {
+      "t_in_0_c": 21.0,
+      "t_iw_0_c": 22.934778958983205,
+      "t_ow_0_c": 22.934778958983205
+    }
+  },
+  "final_identified_parameters": {
+    "r_in_iw": 0.8689584429623614,
+    "r_iw_ow": 0.5857993959551643,
+    "r_ow_oa": 0.7696262359007513,
+    "r_in_oa": 2.4353043421732994,
+    "c_in": 13.279682357510758,
+    "c_w": 17.629889254678233,
+    "alpha_ghi_outer_wall": 0.0,
+    "alpha_ghi_inner_wall": 0.5
+  }
+}

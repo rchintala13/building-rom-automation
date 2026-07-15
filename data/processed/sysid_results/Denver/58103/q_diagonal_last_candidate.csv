@@ -1,0 +1,2 @@
+candidate_index,t_in_c,t_iw_c,t_ow_c,r_in_iw,r_iw_ow,r_ow_oa,r_in_oa,c_in,c_w,alpha_ghi_outer_wall,alpha_ghi_inner_wall
+1,2.5e-05,5.743657740433159e-05,5.743657740433159e-05,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
