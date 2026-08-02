@@ -108,9 +108,12 @@ parameter_grid:
 
   r_in_iw:
     - 0.5
+    - 0.1
+    - 0.05
 
   r_iw_ow:
     - 0.4
+    - 0.04
 
   r_ow_oa:
     - 0.5
