@@ -16,25 +16,25 @@
     "test_steps": 1339
   },
   "selection_segment": "val",
-  "n_candidates_evaluated": 2,
-  "best_candidate_index": 1,
-  "best_selection_objective": 0.830127092238619,
+  "n_candidates_evaluated": 12,
+  "best_candidate_index": 5,
+  "best_selection_objective": 0.7695524136112502,
   "best_metrics": {
     "train": {
-      "rmse_one_step_c": 0.670377585491599,
-      "rmse_n_step_c": 0.7344240954210692
+      "rmse_one_step_c": 0.7893241601870111,
+      "rmse_n_step_c": 0.8773274699537593
     },
     "val": {
-      "rmse_one_step_c": 0.7828535609394851,
-      "rmse_n_step_c": 0.8503871770811051
+      "rmse_one_step_c": 0.7169106684524851,
+      "rmse_n_step_c": 0.7921131615364352
     },
     "test": {
-      "rmse_one_step_c": 0.8738429806183637,
-      "rmse_n_step_c": 0.9507741105089011
+      "rmse_one_step_c": 0.8156037338165852,
+      "rmse_n_step_c": 0.9003929413162235
     }
   },
   "best_initial_parameter_guess": {
-    "r_in_iw": 0.5,
+    "r_in_iw": 0.1,
     "r_iw_ow": 0.4,
     "r_ow_oa": 0.5,
     "r_in_oa": 1.5,
@@ -48,7 +48,7 @@
     "alpha_ow": -1.5,
     "t_oa_hist_mean_c": 18.609722222222224,
     "t_in_hist_mean_c": 20.339744916926616,
-    "objective_value": 2.4534639465332777,
+    "objective_value": 2.348048308075167,
     "success": true,
     "message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
     "n_iterations": 2,
@@ -59,13 +59,13 @@
     }
   },
   "final_identified_parameters": {
-    "r_in_iw": 0.8689584429623614,
-    "r_iw_ow": 0.5857993959551643,
-    "r_ow_oa": 0.7696262359007513,
-    "r_in_oa": 2.4353043421732994,
-    "c_in": 13.279682357510758,
-    "c_w": 17.629889254678233,
-    "alpha_ghi_outer_wall": 0.0,
+    "r_in_iw": 0.16096798561719644,
+    "r_iw_ow": 0.7172835409406256,
+    "r_ow_oa": 0.6886612770125929,
+    "r_in_oa": 2.044448243129484,
+    "c_in": 9.848107432546254,
+    "c_w": 19.468609300147623,
+    "alpha_ghi_outer_wall": 0.10802487619462976,
     "alpha_ghi_inner_wall": 0.5
   }
 }

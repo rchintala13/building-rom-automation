@@ -26,7 +26,7 @@ inputs:
 # immediately before `start` for wall temperature initialization.
 window:
   start: "2018-08-02T00:00:05"
-  duration_hours: 24
+  duration_hours: 48
 
 # Hours of prior data used to compute mean(T_oa) and mean(T_in) for
 # initializing wall temperatures.
