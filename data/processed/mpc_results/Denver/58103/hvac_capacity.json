@@ -1,0 +1,8 @@
+{
+  "key": {
+    "window_start": "2018-08-02T00:00:00",
+    "window_end": "2018-08-03T00:00:00",
+    "dt_minutes": 5.0
+  },
+  "max_sensible_cooling_kw": 6.737253038159507
+}

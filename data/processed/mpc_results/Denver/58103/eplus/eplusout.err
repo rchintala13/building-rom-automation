@@ -1,0 +1,45 @@
+Program Version,EnergyPlus, Version 24.2.0-94a887817b, YMD=2026.08.03 20:15,
+   ** Warning ** PerformancePrecisionTradeoffs: Carroll MRT radiant exchange method is selected.
+   ** Warning ** RunPeriod: object=RUN PERIOD 1, start weekday (MONDAY) does not match the start year (2018), corrected to THURSDAY.
+   ************* Note that the following warning(s) may/will occur if you have not enclosed your zone completely.
+   ** Warning ** Entered Zone Volumes differ from calculated zone volume(s).
+   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on individual zones.
+   ** Warning ** CalculateZoneVolume: 3 zones are not fully enclosed. For more details use:  Output:Diagnostics,DisplayExtrawarnings; 
+   ** Warning ** GetDXCoils: Coil:Heating:DX:MultiSpeed="MINI SPLIT HEAT PUMP HTG COIL" curve values
+   **   ~~~   ** ... Defrost Energy Input Ratio Function of Temperature Curve Name = DEFROSTEIR output is not equal to 1.0 (+ or - 10%) at rated conditions.
+   **   ~~~   ** ... Curve output at rated conditions = 0.152
+   ** Warning ** For object = Coil:Cooling:DX:MultiSpeed, name = "MINI SPLIT HEAT PUMP CLG COIL"
+   **   ~~~   ** Calculated outlet air relative humidity greater than 1. The combination of
+   **   ~~~   ** rated air volume flow rate, total cooling capacity and sensible heat ratio yields coil exiting
+   **   ~~~   ** air conditions above the saturation curve. Possible fixes are to reduce the rated total cooling
+   **   ~~~   ** capacity, increase the rated air volume flow rate, or reduce the rated sensible heat ratio for this coil.
+   **   ~~~   ** If autosizing, it is recommended that all three of these values be autosized.
+   **   ~~~   ** ...Inputs used for calculating cooling coil bypass factor.
+   **   ~~~   ** ...Inlet Air Temperature     = 26.67 C
+   **   ~~~   ** ...Outlet Air Temperature    = 13.98 C
+   **   ~~~   ** ...Inlet Air Humidity Ratio  = 1.118470E-002 kgWater/kgDryAir
+   **   ~~~   ** ...Outlet Air Humidity Ratio = 9.958861E-003 kgWater/kgDryAir
+   **   ~~~   ** ...Total Cooling Capacity used in calculation = 1923.99 W
+   **   ~~~   ** ...Air Mass Flow Rate used in calculation     = 0.119425 kg/s
+   **   ~~~   ** ...Air Volume Flow Rate used in calculation   = 0.103242 m3/s
+   **   ~~~   **  During Warmup, Environment=RUN PERIOD 1, at Simulation time=08/02 00:00 - 00:05
+   **   ~~~   ** CalcCBF: SHR adjusted to achieve valid outlet air properties and the simulation continues.
+   **   ~~~   ** CalcCBF: initial SHR = 0.80593
+   **   ~~~   ** CalcCBF: adjusted SHR = 0.80494
+   ** Warning ** Check input. Pump nominal power or motor efficiency is set to 0, for pump=DHW LOOP PUMP
+   ************* Testing Individual Branch Integrity
+   ************* All Branches passed integrity testing
+   ************* Testing Individual Supply Air Path Integrity
+   ************* All Supply Air Paths passed integrity testing
+   ************* Testing Individual Return Air Path Integrity
+   ************* All Return Air Paths passed integrity testing
+   ************* No node connection errors were found.
+   ************* Beginning Simulation
+   ************* Simulation Error Summary *************
+   ** Warning ** The following Report Variables were requested but not generated -- check.rdd file
+   **   ~~~   ** Either the IDF did not contain these elements, the variable name is misspelled,
+   **   ~~~   ** or the requested variable is an advanced output which requires Output : Diagnostics, DisplayAdvancedReportVariables;
+   ************* Key=conditioned space, VarName=ZONE WINDOWS TOTAL TRANSMITTED SOLAR RADIATION ENERGY, Frequency=TimeStep
+   ************* EnergyPlus Warmup Error Summary. During Warmup: 0 Warning; 0 Severe Errors.
+   ************* EnergyPlus Sizing Error Summary. During Sizing: 0 Warning; 0 Severe Errors.
+   ************* EnergyPlus Completed Successfully-- 7 Warning; 0 Severe Errors; Elapsed Time=00hr 00min  2.50sec

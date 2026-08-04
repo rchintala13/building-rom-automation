@@ -1,0 +1,65 @@
+# Closed-loop MPC of the identified 4R2C model acting on the live EnergyPlus
+# building. The MPC decides HVAC thermal power (P_hvac, kW, signed) and injects
+# it directly into the conditioned zone via an actuated OtherEquipment object.
+
+paths:
+  raw_idf_root: "data/raw/resstock_idfs"        # source for copy-if-missing
+  mpc_idf_root: "data/mpc_idfs"                  # MPC IDF folder (copied here if absent)
+  processed_root: "data/processed/training_data" # processed_5min.csv (disturbances/history)
+  sysid_results_root: "data/processed/sysid_results"  # where model.json lives
+  weather: "data/raw/weather/USA_CO_Denver.epw"
+  output_root: "data/processed/mpc_results"
+  idf_edit_config: "configs/idf_edit/edit_idfs.yaml"  # reused to fix schedule paths, setpoints, outputs
+
+energyplus:
+  install_dir: "C:/EnergyPlusV24-2-0"           # for Energy+.idd and pyenergyplus
+
+selection:
+  city: "Denver"
+  house_name: "58103"
+  zone_name: null                               # null => auto-detect conditioned zone
+
+model:
+  path: null                                    # null => sysid_results_root/<city>/<house>/model.json
+
+window:
+  start: "2018-08-02T00:00:00"
+  duration_hours: 24.0
+history_hours: 6.0                              # to initialize wall temps
+
+control:
+  dt_minutes: 5                                 # control step == E+ zone timestep
+  horizon_steps: 24                             # 24 * 5 min = 2 h prediction horizon
+  p_hvac_max_kw: 6.0                            # symmetric heating/cooling capacity [kW sensible]
+  auto_capacity: false                          # true => measure real max sensible cooling (full-tilt E+ pass) and use it
+
+comfort:
+  lower_c: 21.0
+  upper_c: 24.0
+
+tou:                                            # time-of-use rate schedule (currency/kWh)
+  default_rate: 0.10
+  windows:
+    - { start_hour: 16, end_hour: 21, rate: 0.40 }   # on-peak (4-9pm)
+
+objective:
+  w_energy: 1.0
+  w_comfort: 100.0                              # penalty weight on comfort-band slack
+
+actuation:
+  # How the MPC acts on EnergyPlus:
+  #   direct_power        -> MPC injects its optimal HVAC thermal power directly
+  #                          into the zone (actuated OtherEquipment). Purest test
+  #                          of the 4R2C; principal HVAC is disabled (below).
+  #   supervisory_setpoint-> MPC commands the zone-temperature setpoint and the
+  #                          building's principal HVAC (heat pump) tracks it.
+  #                          Realistic supervisory control.
+  mode: supervisory_setpoint
+  setpoint_deadband_c: 0.5                      # supervisory only: thermostat deadband around target
+  num_power_zones: 4                            # supervisory only: bins of the planned power (fractions of p_hvac_max)
+  min_lookahead_steps: 3                        # supervisory only: floor on the commanded-setpoint lookahead
+
+# Only used in direct_power mode: widen the thermostat deadband so the principal
+# HVAC never activates, leaving the MPC's injected power as the sole conditioner.
+# Ignored in supervisory_setpoint mode (the principal HVAC is the actuator).
+disable_native_hvac: true
