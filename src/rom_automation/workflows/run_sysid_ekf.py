@@ -10,6 +10,7 @@ import pandas as pd
 from rom_automation.logging_utils import get_logger
 from rom_automation.models.types import FourR2CParameters
 from rom_automation.sysid.config_types import SysIDConfig
+from rom_automation.sysid.noise_builders import build_q_from_process_noise
 from rom_automation.sysid.dataset_adapter import (
     DatasetSegment,
     SysIDSplitDataset,
@@ -168,6 +169,25 @@ def run_sysid_ekf_workflow(
     model_payload = asdict(final_identified_parameters)
     model_payload["init_alpha_iw"] = float(result.best_initial_state_result.alpha_iw)
     model_payload["init_alpha_ow"] = float(result.best_initial_state_result.alpha_ow)
+
+    # State-observer ingredients for the MPC. We store the temperature-block
+    # process-noise covariance Q, the measurement noise R, the timestep, and the
+    # observed one-step innovation std (the selection segment's one-step RMSE).
+    # The MPC builds the observer gain from these -- either a fixed inflation of Q
+    # or, by default, an innovation-consistent scaling that matches this observed
+    # innovation -- so the observer retunes automatically as the model improves.
+    selection_segment = (
+        result.best_val_segment
+        if result.best_val_segment is not None
+        else result.best_test_segment
+    )
+    model_payload["observer"] = _build_observer_block(
+        params=final_identified_parameters,
+        dt_seconds=timestep_seconds,
+        cfg=cfg,
+        innovation_std_c=float(selection_segment.metrics.rmse_one_step_c),
+    )
+
     with model_path.open("w", encoding="utf-8") as f:
         json.dump(model_payload, f, indent=2)
 
@@ -220,6 +240,35 @@ def _metrics_to_dict(metrics) -> dict:
     return {
         "rmse_one_step_c": metrics.rmse_one_step_c,
         "rmse_n_step_c": metrics.rmse_n_step_c,
+    }
+
+
+def _build_observer_block(
+    params: FourR2CParameters,
+    dt_seconds: float,
+    cfg: SysIDConfig,
+    innovation_std_c: float,
+) -> dict:
+    """
+    Build the MPC state-observer ingredients: the temperature-block process-noise
+    covariance Q (its structure sets how the T_in innovation is distributed to the
+    walls), the measurement noise R, the timestep, and the observed one-step
+    innovation std (the target for innovation-consistent gain tuning in the MPC).
+    """
+    q_full = build_q_from_process_noise(
+        params=params,
+        dt_seconds=dt_seconds,
+        q_in_std_kw=cfg.ekf.process_noise.q_in_std_kw,
+        q_iw_std_kw=cfg.ekf.process_noise.q_iw_std_kw,
+        q_ow_std_kw=cfg.ekf.process_noise.q_ow_std_kw,
+    )
+    q_temp = q_full[0:3, 0:3]
+
+    return {
+        "q_temp": q_temp.tolist(),
+        "r": float(cfg.ekf.r_value),
+        "dt_seconds": float(dt_seconds),
+        "innovation_std_c": float(innovation_std_c),
     }
 
 

@@ -8,5 +8,27 @@
   "alpha_ghi_outer_wall": 0.10802487619462976,
   "alpha_ghi_inner_wall": 0.5,
   "init_alpha_iw": -1.5,
-  "init_alpha_ow": -1.5
+  "init_alpha_ow": -1.5,
+  "observer": {
+    "q_temp": [
+      [
+        5.799852802135814e-05,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        9.498010412772018e-06,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        9.498010412772018e-06
+      ]
+    ],
+    "r": 0.05,
+    "dt_seconds": 300.0,
+    "innovation_std_c": 0.7169106684524851
+  }
 }

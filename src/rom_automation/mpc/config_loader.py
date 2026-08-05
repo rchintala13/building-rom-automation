@@ -14,6 +14,7 @@ from rom_automation.mpc.config_types import (
     ModelConfig,
     MpcConfig,
     ObjectiveConfig,
+    ObserverConfig,
     PathsConfig,
     SelectionConfig,
     TouConfig,
@@ -22,6 +23,7 @@ from rom_automation.mpc.config_types import (
 )
 
 _VALID_ACTUATION_MODES = {"direct_power", "supervisory_setpoint"}
+_VALID_OBSERVER_MODES = {"innovation_consistency", "fixed"}
 
 
 def load_mpc_config(config_path: str | Path) -> MpcConfig:
@@ -74,8 +76,28 @@ def load_mpc_config(config_path: str | Path) -> MpcConfig:
         tou=_build_tou(raw["tou"]),
         objective=_build_objective(raw["objective"]),
         actuation=_build_actuation(raw["actuation"]),
+        observer=_build_observer(raw.get("observer")),
         disable_native_hvac=bool(raw.get("disable_native_hvac", True)),
     )
+
+
+def _build_observer(raw_observer: dict[str, Any] | None) -> ObserverConfig:
+    raw_observer = raw_observer or {}
+
+    mode = str(raw_observer.get("mode", "innovation_consistency"))
+    if mode not in _VALID_OBSERVER_MODES:
+        raise ValueError(
+            f"observer.mode must be one of {sorted(_VALID_OBSERVER_MODES)}. "
+            f"Got {mode!r}."
+        )
+
+    inflation_factor = float(raw_observer.get("inflation_factor", 1.0))
+    if inflation_factor <= 0:
+        raise ValueError(
+            f"observer.inflation_factor must be positive. Got {inflation_factor}."
+        )
+
+    return ObserverConfig(mode=mode, inflation_factor=inflation_factor)  # type: ignore[arg-type]
 
 
 def _build_paths(raw_paths: dict[str, Any]) -> PathsConfig:

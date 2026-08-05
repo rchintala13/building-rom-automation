@@ -46,6 +46,17 @@ objective:
   w_energy: 1.0
   w_comfort: 100.0                              # penalty weight on comfort-band slack
 
+observer:
+  # State-observer (steady-state Kalman) gain, built from the Q/R stored in
+  # model.json by the sysid workflow. It corrects the unmeasured wall states
+  # (T_iw, T_ow) and T_in from the EnergyPlus T_in measurement.
+  #   innovation_consistency -> scale Q so the assumed innovation matches the
+  #                             sysid one-step innovation; auto-relaxes as the
+  #                             identified model improves. (default)
+  #   fixed                  -> scale Q by a constant inflation_factor.
+  mode: innovation_consistency
+  inflation_factor: 1.0                         # used only when mode == fixed (1.0 = raw sysid Q)
+
 actuation:
   # How the MPC acts on EnergyPlus:
   #   direct_power        -> MPC injects its optimal HVAC thermal power directly

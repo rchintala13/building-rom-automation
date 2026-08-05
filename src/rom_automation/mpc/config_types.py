@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Literal
 
 ActuationMode = Literal["direct_power", "supervisory_setpoint"]
+ObserverMode = Literal["innovation_consistency", "fixed"]
 
 
 @dataclass(frozen=True)
@@ -201,6 +202,25 @@ class ActuationConfig:
 
 
 @dataclass(frozen=True)
+class ObserverConfig:
+    """
+    MPC state-observer tuning. The observer gain is built from the sysid-stored
+    Q/R ingredients via one of:
+
+    - "innovation_consistency": scale Q so the filter's assumed innovation
+      variance matches the observed one-step innovation (from sysid). The gain
+      auto-relaxes as the identified model improves. This is the default.
+    - "fixed": scale Q by a constant `inflation_factor` (1.0 = raw sysid Q).
+
+    Larger effective process noise => the filter trusts the T_in measurement more
+    (K_in -> 1) and corrects the walls from the innovation.
+    """
+
+    mode: ObserverMode
+    inflation_factor: float
+
+
+@dataclass(frozen=True)
 class MpcConfig:
     """
     Strongly-typed view of a run_mpc YAML config.
@@ -217,6 +237,7 @@ class MpcConfig:
     tou: TouConfig
     objective: ObjectiveConfig
     actuation: ActuationConfig
+    observer: ObserverConfig
     # Only meaningful in "direct_power" mode: when True, the run IDF's thermostat
     # deadband is widened so the principal HVAC never activates, leaving the MPC's
     # injected power as the sole conditioner. Ignored in "supervisory_setpoint"

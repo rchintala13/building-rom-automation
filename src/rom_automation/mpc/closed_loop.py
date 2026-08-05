@@ -15,6 +15,11 @@ from rom_automation.mpc.controller import MpcController
 from rom_automation.mpc.disturbance import DisturbanceProvider
 from rom_automation.mpc.idf_preparer import IdfPreparer, PreparedIdf
 from rom_automation.mpc.plant import EnergyPlusPlant, PlantObservation
+from rom_automation.models.four_r2c_model import FourR2CModel
+from rom_automation.models.state_estimator import (
+    innovation_consistent_gain,
+    steady_state_kalman_gain,
+)
 from rom_automation.models.types import FourR2CInput, FourR2CParameters, FourR2CState
 from rom_automation.rom_sim.runner import FourR2CRunner
 from rom_automation.sysid.dataset_adapter import REQUIRED_COLUMNS
@@ -47,8 +52,13 @@ def run_mpc_closed_loop(cfg: MpcConfig) -> None:
         log_file=Path("logs") / "run_mpc.log",
     )
 
-    params, init_alpha_iw, init_alpha_ow = _load_model(cfg.resolved_model_path())
+    params, init_alpha_iw, init_alpha_ow, observer_block = _load_model(
+        cfg.resolved_model_path()
+    )
     logger.info("Loaded identified 4R2C model from %s", cfg.resolved_model_path())
+    kalman_gain = _resolve_observer_gain(
+        params=params, cfg=cfg, observer_block=observer_block, logger=logger
+    )
 
     df = _load_processed_csv(cfg)
     logger.info("Loaded disturbance CSV with %d rows.", len(df))
@@ -105,6 +115,7 @@ def run_mpc_closed_loop(cfg: MpcConfig) -> None:
             init_alpha_iw=init_alpha_iw,
             init_alpha_ow=init_alpha_ow,
         ),
+        kalman_gain=kalman_gain,
         logger=logger,
     )
 
@@ -157,9 +168,13 @@ class _ClosedLoopOrchestrator:
     """
     Per-step MPC decision logic, driven by the plant's callback.
 
-    Maintains the unmeasured wall states (T_iw, T_ow) by propagating the 4R2C
-    model with the actually-applied input, resetting T_in to the E+ measurement
-    each step (the same pattern as FourR2CRunner's one-step prediction).
+    Runs a fixed-gain (steady-state Kalman) state observer to estimate the full
+    3-state vector [T_in, T_iw, T_ow] that seeds each MPC solve. Each step:
+    predicts the state from the previous posterior and the previously-applied
+    input, then corrects ALL three states from the T_in measurement via the
+    stored gain K -- so the unmeasured walls are updated by the innovation, not
+    just carried open-loop. With K=[1,0,0] this reduces to the previous behavior
+    (T_in trusted, walls uncorrected).
     """
 
     def __init__(
@@ -169,6 +184,7 @@ class _ClosedLoopOrchestrator:
         runner: FourR2CRunner,
         disturbance: DisturbanceProvider,
         init_walls: tuple[float, float],
+        kalman_gain: np.ndarray,
         logger,
     ) -> None:
         self.cfg = cfg
@@ -177,10 +193,12 @@ class _ClosedLoopOrchestrator:
         self.disturbance = disturbance
         self.logger = logger
 
-        self._t_iw = init_walls[0]
-        self._t_ow = init_walls[1]
-        # Model's prediction of the *current* step's T_in, made one step earlier.
-        self._pending_pred_t_in: float | None = None
+        self._kalman_gain = np.asarray(kalman_gain, dtype=float).reshape(-1)
+        self._init_walls = init_walls
+        # Posterior full-state estimate and the input applied over the previous
+        # interval (needed for the predict step). Both None until the first step.
+        self._x_hat: np.ndarray | None = None
+        self._prev_input: FourR2CInput | None = None
 
         self.records: list[dict] = []
 
@@ -199,12 +217,11 @@ class _ClosedLoopOrchestrator:
         t_in_measured_c = obs.t_in_c
         horizon = self.disturbance.horizon(interval_start, self.cfg.control.horizon_steps)
 
-        x0_state = FourR2CState(
-            t_in_c=float(t_in_measured_c),
-            t_iw_c=self._t_iw,
-            t_ow_c=self._t_ow,
-        )
-        sol = self.controller.solve(x0_state.as_vector(), horizon)
+        # State observer: predict from the previous posterior + previously-applied
+        # input, then correct all three states from the T_in measurement.
+        x0_vec, t_in_apriori = self._estimate_state(t_in_measured_c)
+
+        sol = self.controller.solve(x0_vec, horizon)
         if not sol.success:
             self.logger.warning("MPC solve failed at %s: %s", ts, sol.status)
 
@@ -225,26 +242,24 @@ class _ClosedLoopOrchestrator:
             command_kind = "setpoint_c"
             conditioning_power_kw = obs.hvac_power_kw
 
-        # Propagate walls one step with the conditioning power for the next iter.
+        # Remember the input actually applied over this interval so the next
+        # step's observer can predict forward from it.
         d0 = horizon.disturbance_matrix()[0]
-        inp = FourR2CInput(
+        self._prev_input = FourR2CInput(
             t_oa_c=float(d0[0]),
             g_ghi_kw_m2=float(d0[1]),
             p_int_kw=float(d0[2]),
             p_sol_win_kw=0.0,
             p_hvac_kw=float(conditioning_power_kw),
         )
-        next_state = self.runner.model.step(
-            state=x0_state,
-            inp=inp,
-            dt_seconds=self.cfg.control.dt_seconds,
-        )
 
         self.records.append(
             {
                 "timestamp": ts,
                 "t_in_measured_c": float(t_in_measured_c),
-                "t_in_model_pred_c": self._pending_pred_t_in,  # predicted at k-1
+                # a-priori predicted T_in (before the measurement update) = the
+                # observer's one-step prediction; NaN on the first step.
+                "t_in_model_pred_c": t_in_apriori,
                 "mpc_command": float(command),
                 "mpc_command_kind": command_kind,
                 "conditioning_power_kw": float(conditioning_power_kw),
@@ -255,12 +270,39 @@ class _ClosedLoopOrchestrator:
             }
         )
 
-        # Carry walls; T_in will be replaced by the measurement next step.
-        self._t_iw = next_state.t_iw_c
-        self._t_ow = next_state.t_ow_c
-        self._pending_pred_t_in = float(next_state.t_in_c)
-
         return command
+
+    def _estimate_state(self, t_in_measured_c: float) -> tuple[np.ndarray, float]:
+        """
+        Fixed-gain state observer. On the first call, seed the estimate from the
+        measured T_in and the history-based wall init. Thereafter: predict from
+        the previous posterior + previously-applied input, then correct all three
+        states from the T_in innovation via the stored gain.
+
+        Returns the posterior state vector (x0 for the MPC) and the a-priori
+        predicted T_in (NaN on the first step).
+        """
+        y = float(t_in_measured_c)
+
+        if self._x_hat is None or self._prev_input is None:
+            self._x_hat = np.array(
+                [y, self._init_walls[0], self._init_walls[1]], dtype=float
+            )
+            return self._x_hat.copy(), float("nan")
+
+        # Predict from the previous posterior using the previously-applied input.
+        pred_state = self.runner.model.step(
+            state=FourR2CState.from_vector(self._x_hat),
+            inp=self._prev_input,
+            dt_seconds=self.cfg.control.dt_seconds,
+        )
+        x_pred = pred_state.as_vector()
+        t_in_apriori = float(x_pred[0])
+
+        # Correct all three states from the T_in innovation.
+        innovation = y - t_in_apriori
+        self._x_hat = x_pred + self._kalman_gain * innovation
+        return self._x_hat.copy(), t_in_apriori
 
     def _supervisory_setpoint(self, sol, horizon) -> float:
         """
@@ -355,10 +397,15 @@ def _power_zone(power_kw: float, p_max_kw: float, n_zones: int) -> tuple[int, in
 # ---------------------------------------------------------------------- #
 
 
-def _load_model(model_path: Path) -> tuple[FourR2CParameters, float, float]:
+def _load_model(
+    model_path: Path,
+) -> tuple[FourR2CParameters, float, float, dict | None]:
     """
-    Load identified 4R2C parameters and wall-init alphas from model.json. Raises
-    a clear error if the identified model is not available.
+    Load identified 4R2C parameters, wall-init alphas, and the state-observer
+    ingredients (Q/R/dt/innovation std) from model.json. Raises a clear error if
+    the identified model is not available. The observer block may be None (older
+    model.json), in which case the MPC falls back to a K=[1,0,0] observer (T_in
+    trusted, walls uncorrected) reproducing the pre-filter behavior.
     """
     if not model_path.exists():
         raise FileNotFoundError(
@@ -393,7 +440,67 @@ def _load_model(model_path: Path) -> tuple[FourR2CParameters, float, float]:
             "needed to initialize wall temperatures. Re-run the sysid workflow."
         )
 
-    return params, float(alpha_iw), float(alpha_ow)
+    observer = raw.get("observer")
+    return params, float(alpha_iw), float(alpha_ow), observer
+
+
+def _resolve_observer_gain(
+    params: FourR2CParameters,
+    cfg: MpcConfig,
+    observer_block: dict | None,
+    logger,
+) -> np.ndarray:
+    """
+    Build the state-observer gain from the sysid-stored Q/R ingredients and the
+    MPC observer config. Falls back to [1, 0, 0] (T_in trusted, walls uncorrected)
+    if the observer block is missing or the gain cannot be computed.
+    """
+    fallback = np.array([1.0, 0.0, 0.0], dtype=float)
+
+    if observer_block is None:
+        logger.warning(
+            "model.json has no observer block; using K=[1,0,0] (walls "
+            "uncorrected). Re-run the sysid workflow to enable wall correction."
+        )
+        return fallback
+
+    q_temp = np.asarray(observer_block["q_temp"], dtype=float)
+    r = float(observer_block["r"])
+    innovation_std = float(observer_block["innovation_std_c"])
+    obs_dt = float(observer_block.get("dt_seconds", cfg.control.dt_seconds))
+
+    dt = cfg.control.dt_seconds
+    if abs(dt - obs_dt) > 1e-6:
+        logger.warning(
+            "Observer Q was built at dt=%.1fs but control dt=%.1fs; the stored Q "
+            "assumes the sysid timestep. Match control.dt_minutes to the sysid "
+            "timestep for a consistent gain.",
+            obs_dt, dt,
+        )
+
+    disc = FourR2CModel(params=params).discretize(dt)
+
+    try:
+        if cfg.observer.mode == "fixed":
+            f = cfg.observer.inflation_factor
+            k = steady_state_kalman_gain(disc.a_d, disc.c, f * q_temp, r)
+        else:  # innovation_consistency
+            k, f = innovation_consistent_gain(
+                disc.a_d, disc.c, q_temp, r, target_innovation_var=innovation_std**2
+            )
+    except (ValueError, np.linalg.LinAlgError) as exc:
+        logger.warning(
+            "Could not build observer gain (%s); using K=[1,0,0].", exc
+        )
+        return fallback
+
+    gain = np.asarray(k, dtype=float).reshape(-1)
+    logger.info(
+        "State observer: mode=%s, Q-inflation=%.4g, innovation_std=%.3f degC, "
+        "gain [T_in, T_iw, T_ow]=[%.4f, %.4f, %.4f]",
+        cfg.observer.mode, f, innovation_std, gain[0], gain[1], gain[2],
+    )
+    return gain
 
 
 def _load_processed_csv(cfg: MpcConfig) -> pd.DataFrame:

@@ -10,9 +10,9 @@
     "duration_hours": 24.0
   },
   "control": {
-    "dt_minutes": 5,
+    "dt_minutes": 5.0,
     "horizon_steps": 24,
-    "p_hvac_max_kw": 6.737253038159507
+    "p_hvac_max_kw": 6.0
   },
   "comfort": {
     "lower_c": 21.0,
@@ -42,12 +42,12 @@
   "results_csv_path": "data\\processed\\mpc_results\\Denver\\58103\\mpc_closed_loop_20180802T0000.csv",
   "kpis": {
     "n_acting_steps": 288,
-    "plant_vs_model_one_step_rmse_c": 0.06141421043784789,
-    "supervisory_setpoint_tracking_rmse_c": 0.23508284558673384,
-    "total_energy_kwh": 15.689447355673543,
-    "total_tou_cost": 3.78606748084162,
-    "comfort_violation_steps": 3,
-    "comfort_violation_degc_hours": 8.034991182359619e-05,
-    "max_comfort_violation_c": 0.0006819862392504206
+    "plant_vs_model_one_step_rmse_c": 0.0665066622316506,
+    "supervisory_setpoint_tracking_rmse_c": 0.23873168676766415,
+    "total_energy_kwh": 15.321521684348605,
+    "total_tou_cost": 3.7431189972163046,
+    "comfort_violation_steps": 9,
+    "comfort_violation_degc_hours": 0.0003717678086131807,
+    "max_comfort_violation_c": 0.0011794033542500415
   }
 }
