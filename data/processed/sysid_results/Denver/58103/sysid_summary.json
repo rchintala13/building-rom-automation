@@ -18,19 +18,19 @@
   "selection_segment": "val",
   "n_candidates_evaluated": 12,
   "best_candidate_index": 5,
-  "best_selection_objective": 0.7695524136112502,
+  "best_selection_objective": 0.6894106403845817,
   "best_metrics": {
     "train": {
-      "rmse_one_step_c": 0.7893241601870111,
-      "rmse_n_step_c": 0.8773274699537593
+      "rmse_one_step_c": 0.6871182918013046,
+      "rmse_n_step_c": 0.773236593636293
     },
     "val": {
-      "rmse_one_step_c": 0.7169106684524851,
-      "rmse_n_step_c": 0.7921131615364352
+      "rmse_one_step_c": 0.6330458788372475,
+      "rmse_n_step_c": 0.7135669667620107
     },
     "test": {
-      "rmse_one_step_c": 0.8156037338165852,
-      "rmse_n_step_c": 0.9003929413162235
+      "rmse_one_step_c": 0.7245717866292632,
+      "rmse_n_step_c": 0.8158214154665971
     }
   },
   "best_initial_parameter_guess": {
@@ -43,29 +43,25 @@
     "alpha_ghi_outer_wall": 0.1,
     "alpha_ghi_inner_wall": 0.1
   },
-  "best_initial_state_result": {
-    "alpha_iw": -1.5,
-    "alpha_ow": -1.5,
-    "t_oa_hist_mean_c": 18.609722222222224,
-    "t_in_hist_mean_c": 20.339744916926616,
-    "objective_value": 2.348048308075167,
-    "success": true,
-    "message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
-    "n_iterations": 2,
+  "warm_start_initial_state": {
+    "steady_state_seed": {
+      "t_iw_c": 20.839654218096253,
+      "t_ow_c": 19.331319281100292
+    },
     "initial_condition": {
       "t_in_0_c": 21.0,
-      "t_iw_0_c": 22.934778958983205,
-      "t_ow_0_c": 22.934778958983205
+      "t_iw_0_c": 20.39236552312089,
+      "t_ow_0_c": 18.930006977302252
     }
   },
   "final_identified_parameters": {
-    "r_in_iw": 0.16096798561719644,
-    "r_iw_ow": 0.7172835409406256,
-    "r_ow_oa": 0.6886612770125929,
-    "r_in_oa": 2.044448243129484,
-    "c_in": 9.848107432546254,
-    "c_w": 19.468609300147623,
-    "alpha_ghi_outer_wall": 0.10802487619462976,
-    "alpha_ghi_inner_wall": 0.5
+    "r_in_iw": 0.149669728388007,
+    "r_iw_ow": 0.7973128127703009,
+    "r_ow_oa": 0.7782956072630824,
+    "r_in_oa": 2.961608438021249,
+    "c_in": 3.8277558636414133,
+    "c_w": 19.931349834119413,
+    "alpha_ghi_outer_wall": 0.16117135749810246,
+    "alpha_ghi_inner_wall": 0.40201065633837163
   }
 }

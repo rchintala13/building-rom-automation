@@ -9,14 +9,16 @@
   },
   "window": {
     "start": "2018-08-02T00:00:05",
-    "duration_hours": 24.0,
-    "end": "2018-08-03T00:00:05"
+    "duration_hours": 48.0,
+    "end": "2018-08-04T00:00:05"
   },
   "history_hours": 6.0,
   "wall_init": {
-    "alpha_iw": -1.5,
-    "alpha_ow": -1.5,
-    "source": "model.json"
+    "method": "warm_start",
+    "steady_state_seed": {
+      "t_iw_c": 23.865862394702617,
+      "t_ow_c": 23.429661948259117
+    }
   },
   "inputs": {
     "source": "processed",
@@ -24,22 +26,22 @@
   },
   "model_path": "data\\processed\\sysid_results\\Denver\\58103\\model.json",
   "model_parameters": {
-    "r_in_iw": 0.8689584429623614,
-    "r_iw_ow": 0.5857993959551643,
-    "r_ow_oa": 0.7696262359007513,
-    "r_in_oa": 2.4353043421732994,
-    "c_in": 13.279682357510758,
-    "c_w": 17.629889254678233,
-    "alpha_ghi_outer_wall": 0.0,
+    "r_in_iw": 0.16096798561719644,
+    "r_iw_ow": 0.7172835409406256,
+    "r_ow_oa": 0.6886612770125929,
+    "r_in_oa": 2.044448243129484,
+    "c_in": 9.848107432546254,
+    "c_w": 19.468609300147623,
+    "alpha_ghi_outer_wall": 0.10802487619462976,
     "alpha_ghi_inner_wall": 0.5
   },
   "initial_state": {
     "t_in_0_c": 22.55231906393338,
-    "t_iw_0_c": 27.69447570933049,
-    "t_ow_0_c": 27.69447570933049
+    "t_iw_0_c": 23.020767584412102,
+    "t_ow_0_c": 22.14344975564799
   },
   "timestep_seconds": 300.0,
-  "n_segment_steps": 288,
+  "n_segment_steps": 576,
   "n_history_steps": 72,
   "output_csv_path": "data\\processed\\sim_results\\Denver\\58103\\n_step_12_20180802T0000.csv"
 }

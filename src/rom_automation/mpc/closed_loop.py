@@ -21,8 +21,9 @@ from rom_automation.models.state_estimator import (
     steady_state_kalman_gain,
 )
 from rom_automation.models.types import FourR2CInput, FourR2CParameters, FourR2CState
+from rom_automation.models.warm_start import warm_start_walls
 from rom_automation.rom_sim.runner import FourR2CRunner
-from rom_automation.sysid.dataset_adapter import REQUIRED_COLUMNS
+from rom_automation.sysid.dataset_adapter import REQUIRED_COLUMNS, build_input_sequence
 
 
 _PROCESSED_FILENAME = "processed_5min.csv"
@@ -52,9 +53,7 @@ def run_mpc_closed_loop(cfg: MpcConfig) -> None:
         log_file=Path("logs") / "run_mpc.log",
     )
 
-    params, init_alpha_iw, init_alpha_ow, observer_block = _load_model(
-        cfg.resolved_model_path()
-    )
+    params, observer_block = _load_model(cfg.resolved_model_path())
     logger.info("Loaded identified 4R2C model from %s", cfg.resolved_model_path())
     kalman_gain = _resolve_observer_gain(
         params=params, cfg=cfg, observer_block=observer_block, logger=logger
@@ -108,13 +107,7 @@ def run_mpc_closed_loop(cfg: MpcConfig) -> None:
             tou=cfg.tou,
             comfort=cfg.comfort,
         ),
-        init_walls=_initial_walls(
-            cfg=cfg,
-            runner=runner,
-            df=df,
-            init_alpha_iw=init_alpha_iw,
-            init_alpha_ow=init_alpha_ow,
-        ),
+        init_walls=_initial_walls(cfg=cfg, params=params, df=df),
         kalman_gain=kalman_gain,
         logger=logger,
     )
@@ -397,15 +390,14 @@ def _power_zone(power_kw: float, p_max_kw: float, n_zones: int) -> tuple[int, in
 # ---------------------------------------------------------------------- #
 
 
-def _load_model(
-    model_path: Path,
-) -> tuple[FourR2CParameters, float, float, dict | None]:
+def _load_model(model_path: Path) -> tuple[FourR2CParameters, dict | None]:
     """
-    Load identified 4R2C parameters, wall-init alphas, and the state-observer
-    ingredients (Q/R/dt/innovation std) from model.json. Raises a clear error if
-    the identified model is not available. The observer block may be None (older
-    model.json), in which case the MPC falls back to a K=[1,0,0] observer (T_in
-    trusted, walls uncorrected) reproducing the pre-filter behavior.
+    Load identified 4R2C parameters and the state-observer ingredients
+    (Q/R/dt/innovation std) from model.json. Raises a clear error if the
+    identified model is not available. Wall initial conditions are not read here
+    -- they are reconstructed from each run's own history via warm_start_walls.
+    The observer block may be None (older model.json), in which case the MPC
+    falls back to a K=[1,0,0] observer (T_in trusted, walls uncorrected).
     """
     if not model_path.exists():
         raise FileNotFoundError(
@@ -432,16 +424,8 @@ def _load_model(
         alpha_ghi_inner_wall=float(raw["alpha_ghi_inner_wall"]),
     )
 
-    alpha_iw = raw.get("init_alpha_iw")
-    alpha_ow = raw.get("init_alpha_ow")
-    if alpha_iw is None or alpha_ow is None:
-        raise ValueError(
-            f"model file {model_path} does not include init_alpha_iw/init_alpha_ow "
-            "needed to initialize wall temperatures. Re-run the sysid workflow."
-        )
-
     observer = raw.get("observer")
-    return params, float(alpha_iw), float(alpha_ow), observer
+    return params, observer
 
 
 def _resolve_observer_gain(
@@ -522,14 +506,13 @@ def _load_processed_csv(cfg: MpcConfig) -> pd.DataFrame:
 
 def _initial_walls(
     cfg: MpcConfig,
-    runner: FourR2CRunner,
+    params: FourR2CParameters,
     df: pd.DataFrame,
-    init_alpha_iw: float,
-    init_alpha_ow: float,
 ) -> tuple[float, float]:
     """
-    Initialize wall temperatures from the history window preceding the window
-    start, reusing FourR2CRunner.initialize_state.
+    Warm-start wall temperatures from the history window preceding the control
+    window: steady-state seed + anchored burn-in (warm_start_walls), reconstructed
+    from this run's own recent data using the identified parameters.
     """
     start = pd.Timestamp(cfg.window.start)
     history_start = start - pd.Timedelta(hours=cfg.history_hours)
@@ -541,18 +524,20 @@ def _initial_walls(
             "CSV. Reduce history_hours or move the window start forward."
         )
 
-    t_in_0 = float(df.loc[df.index.asof(start), "T_zone_C"]) if start in df.index else float(
-        history_df["T_zone_C"].iloc[-1]
+    t_in_0 = (
+        float(df.loc[start, "T_zone_C"])
+        if start in df.index
+        else float(history_df["T_zone_C"].iloc[-1])
     )
 
-    state = runner.initialize_state(
-        t_in_0_c=t_in_0,
-        history_t_oa_c=history_df["T_oa_C"].to_numpy(dtype=float),
+    result = warm_start_walls(
+        params=params,
+        history_inputs=build_input_sequence(history_df),
         history_t_in_c=history_df["T_zone_C"].to_numpy(dtype=float),
-        alpha_iw=init_alpha_iw,
-        alpha_ow=init_alpha_ow,
+        t_in_0_c=t_in_0,
+        dt_seconds=cfg.control.dt_seconds,
     )
-    return state.t_iw_c, state.t_ow_c
+    return result.initial_condition.t_iw_0_c, result.initial_condition.t_ow_0_c
 
 
 # ---------------------------------------------------------------------- #
