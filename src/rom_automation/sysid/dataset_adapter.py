@@ -54,6 +54,7 @@ class SysIDSplitDataset:
     test: DatasetSegment
     history_t_oa_c: np.ndarray
     history_t_in_c: np.ndarray
+    history_inputs: list[FourR2CInput]
     timestep_seconds: float
 
 
@@ -200,6 +201,7 @@ def build_sysid_split_dataset(
 
     history_t_oa_c = history_df["T_oa_C"].to_numpy(dtype=float)
     history_t_in_c = history_df["T_zone_C"].to_numpy(dtype=float)
+    history_inputs = build_input_sequence(history_df)
 
     train_segment = _build_segment(train_df)
     val_segment = _build_segment(val_df) if val_df is not None else None
@@ -211,6 +213,7 @@ def build_sysid_split_dataset(
         test=test_segment,
         history_t_oa_c=history_t_oa_c,
         history_t_in_c=history_t_in_c,
+        history_inputs=history_inputs,
         timestep_seconds=timestep_seconds,
     )
 

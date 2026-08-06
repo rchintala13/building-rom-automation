@@ -141,15 +141,11 @@ def run_sysid_ekf_workflow(
             "test": _metrics_to_dict(result.best_test_segment.metrics),
         },
         "best_initial_parameter_guess": asdict(result.best_initial_guess),
-        "best_initial_state_result": {
-            "alpha_iw": result.best_initial_state_result.alpha_iw,
-            "alpha_ow": result.best_initial_state_result.alpha_ow,
-            "t_oa_hist_mean_c": result.best_initial_state_result.t_oa_hist_mean_c,
-            "t_in_hist_mean_c": result.best_initial_state_result.t_in_hist_mean_c,
-            "objective_value": result.best_initial_state_result.objective_value,
-            "success": result.best_initial_state_result.success,
-            "message": result.best_initial_state_result.message,
-            "n_iterations": result.best_initial_state_result.n_iterations,
+        "warm_start_initial_state": {
+            "steady_state_seed": {
+                "t_iw_c": result.best_initial_state_result.seed_t_iw_c,
+                "t_ow_c": result.best_initial_state_result.seed_t_ow_c,
+            },
             "initial_condition": {
                 "t_in_0_c": result.best_initial_state_result.initial_condition.t_in_0_c,
                 "t_iw_0_c": result.best_initial_state_result.initial_condition.t_iw_0_c,
@@ -167,8 +163,9 @@ def run_sysid_ekf_workflow(
     model_path = output_dir / "model.json"
     logger.info("Writing identified model parameters: %s", model_path)
     model_payload = asdict(final_identified_parameters)
-    model_payload["init_alpha_iw"] = float(result.best_initial_state_result.alpha_iw)
-    model_payload["init_alpha_ow"] = float(result.best_initial_state_result.alpha_ow)
+    # Wall initial conditions are no longer stored: they are reconstructed on
+    # demand (warm_start_walls) from each run's own history window, so control
+    # runs that don't immediately follow training still get valid wall states.
 
     # State-observer ingredients for the MPC. We store the temperature-block
     # process-noise covariance Q, the measurement noise R, the timestep, and the

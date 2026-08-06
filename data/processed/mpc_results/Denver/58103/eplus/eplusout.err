@@ -1,4 +1,4 @@
-Program Version,EnergyPlus, Version 24.2.0-94a887817b, YMD=2026.08.04 19:20,
+Program Version,EnergyPlus, Version 24.2.0-94a887817b, YMD=2026.08.05 22:26,
    ** Warning ** PerformancePrecisionTradeoffs: Carroll MRT radiant exchange method is selected.
    ** Warning ** RunPeriod: object=RUN PERIOD 1, start weekday (MONDAY) does not match the start year (2018), corrected to THURSDAY.
    ************* Note that the following warning(s) may/will occur if you have not enclosed your zone completely.
@@ -42,4 +42,4 @@ Program Version,EnergyPlus, Version 24.2.0-94a887817b, YMD=2026.08.04 19:20,
    ************* Key=conditioned space, VarName=ZONE WINDOWS TOTAL TRANSMITTED SOLAR RADIATION ENERGY, Frequency=TimeStep
    ************* EnergyPlus Warmup Error Summary. During Warmup: 0 Warning; 0 Severe Errors.
    ************* EnergyPlus Sizing Error Summary. During Sizing: 0 Warning; 0 Severe Errors.
-   ************* EnergyPlus Completed Successfully-- 7 Warning; 0 Severe Errors; Elapsed Time=00hr 00min  2.77sec
+   ************* EnergyPlus Completed Successfully-- 7 Warning; 0 Severe Errors; Elapsed Time=00hr 00min  3.40sec

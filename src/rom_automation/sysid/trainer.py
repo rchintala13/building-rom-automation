@@ -5,13 +5,10 @@ from dataclasses import dataclass
 import numpy as np
 
 from rom_automation.models.types import FourR2CParameters
+from rom_automation.models.warm_start import WarmStartResult, warm_start_walls
 from rom_automation.sysid.dataset_adapter import DatasetSegment, SysIDSplitDataset
 from rom_automation.sysid.ekf import AugmentedStateEKF, AugmentedStateIndex, EKFResult
 from rom_automation.sysid.evaluator import EKFEvaluator, PredictionMetrics
-from rom_automation.sysid.initial_state_optimizer import (
-    InitialStateOptimizationResult,
-    InitialStateOptimizer,
-)
 from rom_automation.sysid.noise_builders import (
     EKFNoiseConfig,
     build_p0_from_ratios,
@@ -82,7 +79,7 @@ class SysIDTrainingResult:
     """
 
     best_initial_guess: FourR2CParameters
-    best_initial_state_result: InitialStateOptimizationResult
+    best_initial_state_result: WarmStartResult
     best_train_segment: SegmentResult
     best_val_segment: SegmentResult | None
     best_test_segment: SegmentResult
@@ -169,7 +166,7 @@ class EKFSysIDTrainer:
         dt_seconds = split_dataset.timestep_seconds
 
         best_initial_guess: FourR2CParameters | None = None
-        best_initial_state_result: InitialStateOptimizationResult | None = None
+        best_initial_state_result: WarmStartResult | None = None
         best_train_segment: SegmentResult | None = None
         best_val_segment: SegmentResult | None = None
         best_test_segment: SegmentResult | None = None
@@ -183,11 +180,10 @@ class EKFSysIDTrainer:
 
         for i, params in enumerate(candidates):
             last_p_diag_records.clear()
-            initial_state_result = self._optimize_initial_state(
+            initial_state_result = self._warm_start_initial_state(
                 params=params,
                 segment=split_dataset.train,
-                history_t_oa_c=split_dataset.history_t_oa_c,
-                history_t_in_c=split_dataset.history_t_in_c,
+                split_dataset=split_dataset,
                 dt_seconds=dt_seconds,
             )
 
@@ -258,11 +254,10 @@ class EKFSysIDTrainer:
                     z=train_ekf_result.z_filtered[-1, :],
                 )
 
-                initial_state_result = self._optimize_initial_state(
+                initial_state_result = self._warm_start_initial_state(
                     params=identified_params,
                     segment=split_dataset.train,
-                    history_t_oa_c=split_dataset.history_t_oa_c,
-                    history_t_in_c=split_dataset.history_t_in_c,
+                    split_dataset=split_dataset,
                     dt_seconds=dt_seconds,
                 )
 
@@ -444,21 +439,23 @@ class EKFSysIDTrainer:
             last_q_diag_record=last_q_diag_record,
         )
 
-    def _optimize_initial_state(
+    def _warm_start_initial_state(
         self,
         params: FourR2CParameters,
         segment: DatasetSegment,
-        history_t_oa_c: np.ndarray,
-        history_t_in_c: np.ndarray,
+        split_dataset: SysIDSplitDataset,
         dt_seconds: float,
-    ) -> InitialStateOptimizationResult:
-        optimizer = InitialStateOptimizer(params=params)
-
-        return optimizer.optimize(
-            inputs=segment.inputs,
-            measurements_t_in_c=np.asarray(segment.measurements_t_in_c, dtype=float),
-            history_t_oa_c=np.asarray(history_t_oa_c, dtype=float),
-            history_t_in_c=np.asarray(history_t_in_c, dtype=float),
+    ) -> WarmStartResult:
+        """
+        Warm-start the wall temperatures via a steady-state seed + anchored
+        burn-in over the shared history window (replaces the old alpha
+        optimization). Uses the candidate/identified `params` to place the walls.
+        """
+        return warm_start_walls(
+            params=params,
+            history_inputs=split_dataset.history_inputs,
+            history_t_in_c=split_dataset.history_t_in_c,
+            t_in_0_c=float(segment.measurements_t_in_c[0]),
             dt_seconds=dt_seconds,
         )
 

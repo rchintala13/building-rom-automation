@@ -10,7 +10,8 @@ import pandas as pd
 
 from rom_automation.logging_utils import get_logger
 from rom_automation.models.types import FourR2CParameters
-from rom_automation.rom_sim.config_types import SimulationConfig, WallInitConfig
+from rom_automation.models.warm_start import warm_start_walls
+from rom_automation.rom_sim.config_types import SimulationConfig
 from rom_automation.rom_sim.runner import FourR2CRunner
 from rom_automation.sysid.dataset_adapter import (
     REQUIRED_COLUMNS,
@@ -47,17 +48,6 @@ def run_4r2c_simulation_workflow(
     params = _load_model_parameters(cfg.model.path)
     logger.info("Loaded model parameters from %s", cfg.model.path)
 
-    resolved_wall_init = _resolve_wall_init(
-        yaml_wall_init=cfg.wall_init,
-        model_path=cfg.model.path,
-    )
-    logger.info(
-        "Wall init alphas: alpha_iw=%.4f, alpha_ow=%.4f (source: %s)",
-        resolved_wall_init.alpha_iw,
-        resolved_wall_init.alpha_ow,
-        "yaml" if cfg.wall_init is not None else "model.json",
-    )
-
     input_csv_path = _resolve_input_csv(cfg)
     logger.info("Reading input CSV: %s", input_csv_path)
     df = _read_input_csv(input_csv_path)
@@ -80,23 +70,26 @@ def run_4r2c_simulation_workflow(
 
     inputs = build_input_sequence(segment_df)
     measurements_t_in_c = segment_df["T_zone_C"].to_numpy(dtype=float)
-    history_t_oa_c = history_df["T_oa_C"].to_numpy(dtype=float)
     history_t_in_c = history_df["T_zone_C"].to_numpy(dtype=float)
 
     runner = FourR2CRunner(params=params, dt_seconds=dt_seconds)
 
-    initial_state = runner.initialize_state(
-        t_in_0_c=float(measurements_t_in_c[0]),
-        history_t_oa_c=history_t_oa_c,
+    warm_start = warm_start_walls(
+        params=params,
+        history_inputs=build_input_sequence(history_df),
         history_t_in_c=history_t_in_c,
-        alpha_iw=resolved_wall_init.alpha_iw,
-        alpha_ow=resolved_wall_init.alpha_ow,
+        t_in_0_c=float(measurements_t_in_c[0]),
+        dt_seconds=dt_seconds,
     )
+    initial_state = warm_start.initial_condition.as_state()
     logger.info(
-        "Initial state: T_in=%.3f, T_iw=%.3f, T_ow=%.3f",
+        "Warm-started initial state: T_in=%.3f, T_iw=%.3f, T_ow=%.3f "
+        "(steady-state seed T_iw=%.3f, T_ow=%.3f)",
         initial_state.t_in_c,
         initial_state.t_iw_c,
         initial_state.t_ow_c,
+        warm_start.seed_t_iw_c,
+        warm_start.seed_t_ow_c,
     )
 
     output_dir = _build_output_dir(cfg)
@@ -122,8 +115,10 @@ def run_4r2c_simulation_workflow(
             _build_summary(
                 cfg=cfg,
                 params=params,
-                resolved_wall_init=resolved_wall_init,
-                wall_init_source="yaml" if cfg.wall_init is not None else "model.json",
+                wall_init_seed={
+                    "t_iw_c": warm_start.seed_t_iw_c,
+                    "t_ow_c": warm_start.seed_t_ow_c,
+                },
                 initial_state_dict={
                     "t_in_0_c": initial_state.t_in_c,
                     "t_iw_0_c": initial_state.t_iw_c,
@@ -177,38 +172,6 @@ def _load_model_parameters(model_path: Path) -> FourR2CParameters:
     )
 
 
-def _resolve_wall_init(
-    yaml_wall_init: WallInitConfig | None,
-    model_path: Path,
-) -> WallInitConfig:
-    """
-    Resolve the wall-init alphas actually used to construct the initial state.
-
-    YAML wins if provided; otherwise fall back to the `init_alpha_iw` /
-    `init_alpha_ow` fields in `model.json` (written by the sysid workflow).
-    Raises if neither source has them.
-    """
-    if yaml_wall_init is not None:
-        return yaml_wall_init
-
-    with model_path.open("r", encoding="utf-8") as f:
-        raw = json.load(f)
-
-    alpha_iw = raw.get("init_alpha_iw")
-    alpha_ow = raw.get("init_alpha_ow")
-
-    if alpha_iw is None or alpha_ow is None:
-        raise ValueError(
-            "wall_init alphas not provided in the YAML config, and model.json "
-            f"at {model_path} does not include `init_alpha_iw`/`init_alpha_ow`. "
-            "Either add a wall_init section to the YAML or re-run the sysid "
-            "workflow so it writes them to model.json."
-        )
-
-    return WallInitConfig(
-        alpha_iw=float(alpha_iw),
-        alpha_ow=float(alpha_ow),
-    )
 
 
 def _resolve_input_csv(cfg: SimulationConfig) -> Path:
@@ -369,8 +332,7 @@ def _run_and_build_output(
 def _build_summary(
     cfg: SimulationConfig,
     params: FourR2CParameters,
-    resolved_wall_init: WallInitConfig,
-    wall_init_source: str,
+    wall_init_seed: dict,
     initial_state_dict: dict,
     input_csv_path: Path,
     output_path: Path,
@@ -397,8 +359,8 @@ def _build_summary(
         },
         "history_hours": cfg.history_hours,
         "wall_init": {
-            **asdict(resolved_wall_init),
-            "source": wall_init_source,
+            "method": "warm_start",
+            "steady_state_seed": wall_init_seed,
         },
         "inputs": {
             "source": cfg.inputs.source,

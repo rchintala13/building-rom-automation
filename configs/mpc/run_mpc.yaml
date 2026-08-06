@@ -40,7 +40,7 @@ comfort:
 tou:                                            # time-of-use rate schedule (currency/kWh)
   default_rate: 0.10
   windows:
-    - { start_hour: 16, end_hour: 21, rate: 0.40 }   # on-peak (4-9pm)
+    - { start_hour: 13, end_hour: 17, rate: 0.40 }   # on-peak (4-9pm)
 
 objective:
   w_energy: 1.0
