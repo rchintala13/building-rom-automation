@@ -1,0 +1,294 @@
+Shadowing Combinations
+..Solar Distribution=FullExterior
+..In the following, only the first 10 reference surfaces will be shown.
+..But all surfaces are used in the calculations.
+==================================
+Surface=NEIGHBOR AZIMUTH 225 DISTANCE 15.0 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=Mir-NEIGHBOR AZIMUTH 225 DISTANCE 15.0 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=9
+..Surface=Mir-NEIGHBOR AZIMUTH 45 DISTANCE 15.0
+..Surface=Mir-WINDOW1 OVERHANGS
+..Surface=Mir-WINDOW2 OVERHANGS
+..Surface=Mir-WINDOW3 OVERHANGS
+..Surface=Mir-WINDOW4 OVERHANGS
+..Surface=WALL5
+..Surface=SURFACE WINDOW2
+..Surface=WALL2
+..Surface=RIMJOIST2
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=NEIGHBOR AZIMUTH 45 DISTANCE 15.0 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=Mir-NEIGHBOR AZIMUTH 45 DISTANCE 15.0 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=9
+..Surface=Mir-NEIGHBOR AZIMUTH 225 DISTANCE 15.0
+..Surface=Mir-WINDOW1 OVERHANGS
+..Surface=Mir-WINDOW2 OVERHANGS
+..Surface=Mir-WINDOW3 OVERHANGS
+..Surface=Mir-WINDOW4 OVERHANGS
+..Surface=WALL6
+..Surface=SURFACE WINDOW4
+..Surface=WALL4
+..Surface=RIMJOIST4
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=WINDOW1 OVERHANGS is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=3
+..Surface=Mir-NEIGHBOR AZIMUTH 225 DISTANCE 15.0
+..Surface=Mir-NEIGHBOR AZIMUTH 45 DISTANCE 15.0
+..Surface=WALL1
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=Mir-WINDOW1 OVERHANGS is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=3
+..Surface=Mir-NEIGHBOR AZIMUTH 225 DISTANCE 15.0
+..Surface=Mir-NEIGHBOR AZIMUTH 45 DISTANCE 15.0
+..Surface=WALL1
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=WINDOW2 OVERHANGS is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=6
+..Surface=Mir-NEIGHBOR AZIMUTH 225 DISTANCE 15.0
+..Surface=Mir-NEIGHBOR AZIMUTH 45 DISTANCE 15.0
+..Surface=Mir-WINDOW1 OVERHANGS
+..Surface=Mir-WINDOW3 OVERHANGS
+..Surface=WALL5
+..Surface=WALL2
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=Mir-WINDOW2 OVERHANGS is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=4
+..Surface=Mir-NEIGHBOR AZIMUTH 225 DISTANCE 15.0
+..Surface=Mir-NEIGHBOR AZIMUTH 45 DISTANCE 15.0
+..Surface=WALL5
+..Surface=WALL2
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=WINDOW3 OVERHANGS is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=4
+..Surface=Mir-NEIGHBOR AZIMUTH 225 DISTANCE 15.0
+..Surface=Mir-NEIGHBOR AZIMUTH 45 DISTANCE 15.0
+..Surface=SURFACE DOOR1
+..Surface=WALL3
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=Mir-WINDOW3 OVERHANGS is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=4
+..Surface=Mir-NEIGHBOR AZIMUTH 225 DISTANCE 15.0
+..Surface=Mir-NEIGHBOR AZIMUTH 45 DISTANCE 15.0
+..Surface=SURFACE DOOR1
+..Surface=WALL3
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=WINDOW4 OVERHANGS is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=6
+..Surface=Mir-NEIGHBOR AZIMUTH 225 DISTANCE 15.0
+..Surface=Mir-NEIGHBOR AZIMUTH 45 DISTANCE 15.0
+..Surface=Mir-WINDOW1 OVERHANGS
+..Surface=Mir-WINDOW3 OVERHANGS
+..Surface=WALL6
+..Surface=WALL4
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=Mir-WINDOW4 OVERHANGS is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=4
+..Surface=Mir-NEIGHBOR AZIMUTH 225 DISTANCE 15.0
+..Surface=Mir-NEIGHBOR AZIMUTH 45 DISTANCE 15.0
+..Surface=WALL6
+..Surface=WALL4
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=WALL5 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=2
+..Surface=Mir-NEIGHBOR AZIMUTH 225 DISTANCE 15.0
+..Surface=Mir-WINDOW2 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=WALL6 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=2
+..Surface=Mir-NEIGHBOR AZIMUTH 45 DISTANCE 15.0
+..Surface=Mir-WINDOW4 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=SURFACE 1 REVERSED 1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=ROOF1 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=ROOF2 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=SURFACE DOOR1 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=1
+..Surface=Mir-WINDOW3 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=1
+....Surface=DOOR1
+==================================
+Surface=DOOR1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=SURFACE WINDOW1 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=1
+..Surface=Mir-WINDOW1 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=1
+....Surface=WINDOW1
+==================================
+Surface=WINDOW1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=SURFACE WINDOW2 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=2
+..Surface=Mir-NEIGHBOR AZIMUTH 225 DISTANCE 15.0
+..Surface=Mir-WINDOW2 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=1
+....Surface=WINDOW2
+==================================
+Surface=WINDOW2 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=SURFACE WINDOW3 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=1
+..Surface=Mir-WINDOW3 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=1
+....Surface=WINDOW3
+==================================
+Surface=WINDOW3 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=SURFACE WINDOW4 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=2
+..Surface=Mir-NEIGHBOR AZIMUTH 45 DISTANCE 15.0
+..Surface=Mir-WINDOW4 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=1
+....Surface=WINDOW4
+==================================
+Surface=WINDOW4 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=WALL1 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=1
+..Surface=Mir-WINDOW1 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=WALL2 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=2
+..Surface=Mir-NEIGHBOR AZIMUTH 225 DISTANCE 15.0
+..Surface=Mir-WINDOW2 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=WALL3 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=1
+..Surface=Mir-WINDOW3 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=WALL4 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=2
+..Surface=Mir-NEIGHBOR AZIMUTH 45 DISTANCE 15.0
+..Surface=Mir-WINDOW4 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=FLOOR1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=FLOOR2 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=FURNITURE MASS CONDITIONED SPACE 1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PARTITION WALL MASS is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=FOUNDATIONWALL1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=RIMJOIST1 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=1
+..Surface=Mir-WINDOW1 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=RIMJOIST2 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=2
+..Surface=Mir-NEIGHBOR AZIMUTH 225 DISTANCE 15.0
+..Surface=Mir-WINDOW2 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=RIMJOIST3 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=1
+..Surface=Mir-WINDOW3 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=RIMJOIST4 is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=2
+..Surface=Mir-NEIGHBOR AZIMUTH 45 DISTANCE 15.0
+..Surface=Mir-WINDOW4 OVERHANGS
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=SLAB1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=SURFACE 1 REVERSED is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0

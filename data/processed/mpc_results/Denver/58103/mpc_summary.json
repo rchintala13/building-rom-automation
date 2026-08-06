@@ -1,0 +1,53 @@
+{
+  "selection": {
+    "city": "Denver",
+    "house_name": "58103",
+    "zone_name": "conditioned space"
+  },
+  "window": {
+    "start": "2018-08-02T00:00:00",
+    "end": "2018-08-03T00:00:00",
+    "duration_hours": 24.0
+  },
+  "control": {
+    "dt_minutes": 5.0,
+    "horizon_steps": 24,
+    "p_hvac_max_kw": 6.0
+  },
+  "comfort": {
+    "lower_c": 21.0,
+    "upper_c": 24.0
+  },
+  "tou": {
+    "default_rate": 0.1,
+    "windows": [
+      {
+        "start_hour": 16,
+        "end_hour": 21,
+        "rate": 0.4
+      }
+    ]
+  },
+  "objective": {
+    "w_energy": 1.0,
+    "w_comfort": 100.0
+  },
+  "actuation": {
+    "mode": "supervisory_setpoint",
+    "setpoint_deadband_c": 0.5,
+    "disable_native_hvac": false
+  },
+  "model_path": "data\\processed\\sysid_results\\Denver\\58103\\model.json",
+  "run_idf_path": "data\\processed\\mpc_results\\Denver\\58103\\run_20180802T0000.idf",
+  "results_csv_path": "data\\processed\\mpc_results\\Denver\\58103\\mpc_closed_loop_20180802T0000.csv",
+  "kpis": {
+    "n_acting_steps": 288,
+    "plant_vs_model_one_step_rmse_c": 0.0665066622316506,
+    "supervisory_setpoint_tracking_rmse_c": 0.23873168676766415,
+    "total_energy_kwh": 15.321521684348605,
+    "total_tou_cost": 3.7431189972163046,
+    "comfort_violation_steps": 9,
+    "comfort_violation_degc_hours": 0.0003717678086131807,
+    "max_comfort_violation_c": 0.0011794033542500415
+  }
+}
