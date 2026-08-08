@@ -4,21 +4,33 @@ channels:
   - conda-forge
   - defaults
 
+# Versions pinned to the environment that produced the current results (also
+# recorded per run via the MLflow env.* tags). Recreate with:
+#   conda env create -f environment.yml
+#
+# NOTE: EnergyPlus is a separate SYSTEM dependency (v24.2.0), installed via its
+# own installer, and is NOT available through conda/pip. Its version is recorded
+# in MLflow as the `env.energyplus_version` tag.
 dependencies:
-  - python=3.12
+  - python=3.13
   - pip
-  - pyyaml
   - pytest
 
-  # Conda scientific stack
-  - numpy
-  - pandas
-  - scikit-learn
-  - matplotlib
+  # Conda scientific stack (pinned)
+  - pyyaml=6.0.3
+  - numpy=2.3.5
+  - scipy=1.16.3
+  - pandas=2.3.3
+  - scikit-learn=1.7.2
+  - matplotlib=3.10.6
 
-  # Pip-only packages
   - pip:
-      - filterpy
-      - eppy
+      - filterpy==1.4.5
+      - eppy==0.5.69
+      - mlflow==3.15.1
 
-      
+      # Agent module (LangGraph) -- optional, not required for the sysid / MPC
+      # pipeline; left unpinned as they are not part of the core results.
+      - langgraph
+      - langchain-core
+      - langchain-anthropic

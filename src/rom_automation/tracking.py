@@ -91,6 +91,11 @@ def log_sysid_run(
             mlflow.set_tag("git_commit", git)
         mlflow.set_tag("git_dirty", str(_git_dirty()).lower())
 
+        # Environment provenance (the axis git/config don't capture): Python +
+        # platform, and the EnergyPlus system-dependency version.
+        for key, value in _environment_tags().items():
+            mlflow.set_tag(key, value)
+
         mlflow.log_params(_config_params(cfg, summary))
         mlflow.log_metrics(_sysid_metrics(summary, model))
 
@@ -100,9 +105,12 @@ def log_sysid_run(
                 mlflow.log_artifact(str(path))
 
         # The exact config YAML that produced this run (complete inputs,
-        # git-independent).
+        # git-independent), plus the pinned environment spec.
         if config_path is not None and Path(config_path).exists():
             mlflow.log_artifact(str(config_path))
+        env_yml = Path("environment.yml")
+        if env_yml.exists():
+            mlflow.log_artifact(str(env_yml))
 
     logger.info(
         "Logged sysid run to MLflow experiment '%s' (%s).",
@@ -191,6 +199,52 @@ def _git_commit() -> str | None:
         return out.stdout.strip() or None
     except Exception:  # noqa: BLE001
         return None
+
+
+def _environment_tags() -> dict[str, str]:
+    import platform
+
+    return {
+        "env.python_version": platform.python_version(),
+        "env.platform": platform.platform(),
+        "env.energyplus_version": _energyplus_version(),
+    }
+
+
+def _energyplus_version() -> str:
+    """
+    Best-effort EnergyPlus version (a system dependency not in conda/pip). Prefers
+    the ENERGYPLUS_VERSION env var (the reliable override, especially with
+    multiple installs); otherwise returns the HIGHEST version parsed from a
+    discovered install dir (e.g. 'EnergyPlusV24-2-0' -> '24.2.0'); 'unknown' if
+    none found.
+    """
+    import glob
+    import os
+    import re
+
+    explicit = os.environ.get("ENERGYPLUS_VERSION")
+    if explicit:
+        return explicit
+
+    roots = [
+        "C:/EnergyPlusV*",
+        "C:/EnergyPlus*",
+        "/usr/local/EnergyPlus-*",
+        "/Applications/EnergyPlus*",
+    ]
+    versions: list[tuple[int, int, int]] = []
+    for pattern in roots:
+        for path in glob.glob(pattern):
+            match = re.search(r"(\d+)[.\-](\d+)[.\-](\d+)", Path(path).name)
+            if match:
+                versions.append(
+                    (int(match.group(1)), int(match.group(2)), int(match.group(3)))
+                )
+    if not versions:
+        return "unknown"
+    hi = max(versions)
+    return f"{hi[0]}.{hi[1]}.{hi[2]}"
 
 
 def _git_dirty() -> bool:
