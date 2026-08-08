@@ -52,6 +52,17 @@ class EKFConfig:
 
 
 @dataclass(frozen=True)
+class TrackingConfig:
+    """
+    MLflow experiment-tracking settings. `tracking_uri` None => local ./mlruns.
+    """
+
+    enabled: bool
+    experiment_name: str
+    tracking_uri: str | None
+
+
+@dataclass(frozen=True)
 class SysIDConfig:
     """
     Strongly-typed view of a run_ekf_sysid YAML config.
@@ -66,3 +77,4 @@ class SysIDConfig:
     ekf: EKFConfig
     parameter_grid: ParameterCandidateGrid
     parameter_bounds: ParameterBoundFractions
+    tracking: TrackingConfig

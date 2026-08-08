@@ -101,7 +101,7 @@ python -m rom_automation.cli.process_energyplus_outputs \
 Runs EKF-based 4R2C system identification on a processed training CSV. For each candidate in the parameter grid, the workflow:
 
 1. Splits the dataset into train / (optional) val / test segments (`dataset.splits`).
-2. Runs a two-pass augmented-state EKF on training (the second pass re-optimizes wall initial conditions using the parameters identified by the first pass — see `refine_initial_state`).
+2. Runs a two-pass augmented-state EKF on training (the second pass re-warm-starts the wall temperatures — steady-state seed + anchored burn-in — using the parameters identified by the first pass; see `refine_initial_state`).
 3. Freezes parameters at their end-of-train values and continues the filter on val and test for held-out evaluation.
 4. Scores the candidate by RMSE on the validation segment (or test, if no val).
 
@@ -112,7 +112,7 @@ Outputs are written to `data/processed/sysid_results/<city>/<house>/`:
 | File | Contents |
 |------|----------|
 | `sysid_summary.json` | Best candidate, per-segment metrics, identified parameters |
-| `model.json` | Identified 4R2C parameters plus wall-init alphas (consumed by the simulation workflow) |
+| `model.json` | Identified 4R2C parameters plus the state-observer block (Q/R/dt/innovation std); consumed by the simulation and MPC workflows |
 | `ekf_filtered_augmented_states.csv` | Filtered augmented state trajectory across all segments |
 | `one_step_predictions.csv` | One-step predictions vs. measurements across all segments |
 | `p_diagonals_last_candidate.csv` | EKF covariance diagonals per timestep for the last candidate |
@@ -122,6 +122,69 @@ Outputs are written to `data/processed/sysid_results/<city>/<house>/`:
 python -m rom_automation.cli.run_sysid_ekf \
     --config configs/sysid/run_ekf_sysid.yaml
 ```
+
+### Experiment Tracking (MLflow)
+
+When `tracking.enabled: true` in the sysid config, each `run_sysid_ekf` run is logged to MLflow so you can track methodological improvements over time. By default the store is local (metadata in a SQLite `mlflow.db`, artifacts under `mlruns/`); both are gitignored and should be backed up together.
+
+```yaml
+tracking:
+  enabled: true
+  experiment_name: "rom_sysid"
+  tracking_uri: null            # null => local SQLite + ./mlruns; "file:./mlruns" for a plain-file store
+```
+
+Browse runs with `mlflow ui` (from the repo root) or query them via `mlflow.search_runs(experiment_names=["rom_sysid"])`. Each run logs:
+
+**Artifacts** (plain files under `mlruns/<exp>/<run>/artifacts/`)
+
+| Artifact | Contents |
+|----------|----------|
+| `model.json` | Identified 4R2C parameters + observer block (Q/R/dt/innovation std) |
+| `sysid_summary.json` | Full run summary (per-segment metrics, warm-start init, best candidate) |
+| `<config>.yaml` | The exact config file that produced the run (complete inputs, git-independent) |
+
+**Params — model attributes** (`attr.*`; the methodology descriptors, so improvements are traceable)
+
+| Param | Meaning |
+|-------|---------|
+| `attr.validation_evaluation` | Model evaluated over the entire validation dataset |
+| `attr.wall_init_method` | Wall temps via steady-state seed + anchored burn-in |
+| `attr.param_identification` | Augmented-state EKF |
+| `attr.candidate_selection_metric` | Validation objective |
+| `attr.observer_gain` | Innovation-consistent steady-state Kalman |
+| `attr.n_step_horizon` | n-step prediction horizon |
+
+**Params — config inputs**
+
+| Param | Meaning |
+|-------|---------|
+| `city`, `house_name` | Building selection |
+| `history_hours` | Warm-start / burn-in window |
+| `split.train`, `split.val`, `split.test` | Dataset split fractions |
+| `ekf.r_value`, `ekf.n_steps_ahead` | Measurement noise, n-step horizon |
+| `ekf.w_one_step`, `ekf.w_n_step` | Selection-objective weights |
+| `process_noise.q_in_std_kw`, `…q_iw_std_kw`, `…q_ow_std_kw` | Process-noise stds |
+| `n_candidates_evaluated`, `selection_segment` | Grid size, segment used for selection |
+
+**Metrics**
+
+| Metric | Meaning |
+|--------|---------|
+| `rmse_one_step_{train,val,test}` | One-step prediction RMSE per segment |
+| `rmse_n_step_{train,val,test}` | n-step prediction RMSE per segment |
+| `selection_objective` | Weighted validation objective used to pick the candidate |
+| `param.<name>` (8) | Identified parameter values (r_in_iw … alpha_ghi_inner_wall) |
+| `observer.innovation_std_c`, `observer.r` | Observer ingredients |
+
+**Tags**
+
+| Tag | Meaning |
+|-----|---------|
+| `run_type` | `sysid` |
+| `city`, `house_name` | Building selection (filterable) |
+| `wall_init_method`, `validation_evaluation` | Mirror the model attributes for easy filtering |
+| `git_commit`, `git_dirty` | Code version, and whether the working tree had uncommitted changes |
 
 ### Run 4R2C Simulation / Prediction
 
@@ -133,9 +196,9 @@ Runs the identified 4R2C model against real or custom input drivers, in one of t
 | `one_step` | `timestamp, t_in_measured_c, t_in_pred_one_step_c` — reset T_in each step, predict k+1 |
 | `n_step` | `timestamp, t_in_measured_c, t_in_pred_n_step_<N>_c` — reset T_in each step, predict k+N |
 
-The config's `inputs.source` selects between `processed` (reads `processed_5min.csv` for the selected city/house) or `custom` (any CSV with the same schema — must include `T_zone_C` for the one-step and n-step modes). The `window` section slices the input CSV into `[start, start + duration_hours)`, and `history_hours` of prior data is used to initialize wall temperatures via `alpha_iw` / `alpha_ow`. If the YAML omits the `wall_init` section, the workflow falls back to the identified alphas stored in `model.json`.
+The config's `inputs.source` selects between `processed` (reads `processed_5min.csv` for the selected city/house) or `custom` (any CSV with the same schema — must include `T_zone_C` for the one-step and n-step modes). The `window` section slices the input CSV into `[start, start + duration_hours)`, and `history_hours` of prior data is used to warm-start the wall temperatures (steady-state seed + anchored burn-in) using the identified parameters — no alphas or `wall_init` section are needed.
 
-Outputs are written to `data/processed/sim_results/<city>/<house>/<mode>_<YYYYMMDDTHHMM>.csv` alongside a `simulation_summary.json` capturing the run metadata, resolved wall-init source, and model parameters used.
+Outputs are written to `data/processed/sim_results/<city>/<house>/<mode>_<YYYYMMDDTHHMM>.csv` alongside a `simulation_summary.json` capturing the run metadata, the warm-start wall initialization (steady-state seed), and model parameters used.
 
 ```bash
 python -m rom_automation.cli.run_4r2c_simulation \

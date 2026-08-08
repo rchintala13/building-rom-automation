@@ -24,3 +24,6 @@ data/processed/training_data
 # Keep edited IDFs
 !data/intermediate/perturbed_idf/
 !data/intermediate/perturbed_idf/**/*.idf
+# MLflow local tracking store
+mlruns/
+mlflow.db

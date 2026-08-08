@@ -13,6 +13,7 @@ from rom_automation.sysid.config_types import (
     SelectionConfig,
     SplitsConfig,
     SysIDConfig,
+    TrackingConfig,
 )
 from rom_automation.sysid.noise_builders import P0Spec, ProcessNoiseSpec
 from rom_automation.sysid.parameter_grid import (
@@ -60,6 +61,7 @@ def load_sysid_config(config_path: str | Path) -> SysIDConfig:
     ekf_cfg = _build_ekf_config(raw["ekf"])
     parameter_grid_cfg = _build_parameter_grid_config(raw["parameter_grid"])
     parameter_bounds_cfg = _build_parameter_bounds_config(raw["parameter_bounds"])
+    tracking_cfg = _build_tracking_config(raw.get("tracking"))
 
     return SysIDConfig(
         paths=paths_cfg,
@@ -68,6 +70,17 @@ def load_sysid_config(config_path: str | Path) -> SysIDConfig:
         ekf=ekf_cfg,
         parameter_grid=parameter_grid_cfg,
         parameter_bounds=parameter_bounds_cfg,
+        tracking=tracking_cfg,
+    )
+
+
+def _build_tracking_config(raw_tracking: dict[str, Any] | None) -> TrackingConfig:
+    raw_tracking = raw_tracking or {}
+    uri = raw_tracking.get("tracking_uri")
+    return TrackingConfig(
+        enabled=bool(raw_tracking.get("enabled", False)),
+        experiment_name=str(raw_tracking.get("experiment_name", "rom_sysid")),
+        tracking_uri=str(uri) if uri else None,
     )
 
 
