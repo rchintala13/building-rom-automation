@@ -10,6 +10,7 @@ import pandas as pd
 from rom_automation.logging_utils import get_logger
 from rom_automation.models.types import FourR2CParameters
 from rom_automation.sysid.config_types import SysIDConfig
+from rom_automation.tracking import log_sysid_run
 from rom_automation.sysid.noise_builders import build_q_from_process_noise
 from rom_automation.sysid.dataset_adapter import (
     DatasetSegment,
@@ -30,6 +31,7 @@ def run_sysid_ekf_workflow(
     processed_csv_path: str | Path,
     output_dir: str | Path,
     cfg: SysIDConfig,
+    config_path: str | Path | None = None,
 ) -> None:
     """
     Run end-to-end EKF-based system identification from one processed CSV.
@@ -229,6 +231,9 @@ def run_sysid_ekf_workflow(
         state_index=state_index,
     )
     q_diag_df.to_csv(q_diag_path, index=False)
+
+    # Optional MLflow experiment tracking (reads the artifacts just written).
+    log_sysid_run(output_dir=output_dir, cfg=cfg, config_path=config_path)
 
     logger.info("EKF sysid workflow complete.")
 

@@ -3,6 +3,11 @@ paths:
   processed_root: "data/processed/training_data"
   output_root: "data/processed/sysid_results"
 
+tracking:
+  enabled: true                 # log this run to MLflow (params, metrics, model attributes, artifacts)
+  experiment_name: "rom_sysid"
+  tracking_uri: null            # null => local ./mlruns
+
 selection:
   city: "Denver"       # must match a subfolder in raw_idf_root
   house_name: "58103"  # must match an IDF filename (without extension) in that city folder

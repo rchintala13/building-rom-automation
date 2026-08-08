@@ -22,6 +22,7 @@ dependencies = [
     "langgraph",
     "langchain-core",
     "langchain-anthropic",
+    "mlflow",
 ]
 
 [tool.setuptools]

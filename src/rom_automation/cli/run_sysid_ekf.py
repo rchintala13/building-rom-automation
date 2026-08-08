@@ -66,6 +66,7 @@ def main() -> None:
         processed_csv_path=processed_csv_path,
         output_dir=output_dir,
         cfg=cfg,
+        config_path=args.config,
     )
 
 
