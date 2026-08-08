@@ -18,12 +18,18 @@ data/raw/schedules/
 # Ignore only EnergyPlus simulation output folder
 data/intermediate/simulation_outputs/
 
-# Ignore processed csv files
-data/processed/training_data
+# --- Bulky per-house generated / input data (several houses would bloat the repo) ---
+# Processed CSV time-series outputs (training data, sim/mpc results, E+ CSVs, ...)
+data/processed/**/*.csv
 
-# Keep edited IDFs
-!data/intermediate/perturbed_idf/
-!data/intermediate/perturbed_idf/**/*.idf
+# EnergyPlus input files (IDF geometry, EPW weather)
+data/**/*.idf
+data/**/*.epw
+
+# EnergyPlus run-output directories (eplusout.*, meters, tables, sql, msgpack, ...)
+data/processed/**/eplus/
+data/processed/**/eplus_*/
+
 # MLflow local tracking store
 mlruns/
 mlflow.db
