@@ -66,16 +66,16 @@ class IdfPreparer:
         # double-set it here.
         self._editor = IDFEditor(idd_path=self.idd_path)
 
-    def ensure_base_idf(self, cfg: MpcConfig) -> Path:
+    def ensure_base_idf(self, config: MpcConfig) -> Path:
         """
         Return the base MPC IDF path, copying it from the raw IDF folder if it
         does not already exist under `mpc_idf_root`.
         """
-        base_path = cfg.base_mpc_idf_path()
+        base_path = config.base_mpc_idf_path()
         if base_path.exists():
             return base_path
 
-        raw_path = cfg.raw_idf_path()
+        raw_path = config.raw_idf_path()
         if not raw_path.exists():
             raise FileNotFoundError(
                 f"MPC IDF does not exist at {base_path} and the raw source IDF "
@@ -86,18 +86,18 @@ class IdfPreparer:
         shutil.copyfile(raw_path, base_path)
         return base_path
 
-    def prepare_run_idf(self, cfg: MpcConfig, run_idf_path: str | Path) -> PreparedIdf:
+    def prepare_run_idf(self, config: MpcConfig, run_idf_path: str | Path) -> PreparedIdf:
         """
         Build the run IDF from the (ensured) base MPC IDF and return metadata
         needed by the plant harness.
         """
-        idf, run_idf_path, zone_name = self._prepare_common(cfg, run_idf_path)
+        idf, run_idf_path, zone_name = self._prepare_common(config, run_idf_path)
 
-        if cfg.is_direct_power:
+        if config.is_direct_power:
             # Direct injection: add the actuated OtherEquipment and (optionally)
             # take the principal HVAC out of the loop.
             self._add_injection_equipment(idf, zone_name)
-            if cfg.disable_native_hvac:
+            if config.disable_native_hvac:
                 self._widen_thermostat_deadband(idf)
         else:
             # Supervisory: the principal HVAC is the actuator (its setpoints are
@@ -115,7 +115,7 @@ class IdfPreparer:
 
     def prepare_calibration_idf(
         self,
-        cfg: MpcConfig,
+        config: MpcConfig,
         run_idf_path: str | Path,
     ) -> PreparedIdf:
         """
@@ -124,7 +124,7 @@ class IdfPreparer:
         is overridden live to a very low value to force full-tilt cooling. Reuses
         the supervisory-style thermostat requirement.
         """
-        idf, run_idf_path, zone_name = self._prepare_common(cfg, run_idf_path)
+        idf, run_idf_path, zone_name = self._prepare_common(config, run_idf_path)
         self._require_dual_setpoint(idf)
         idf.saveas(str(run_idf_path))
         return PreparedIdf(
@@ -135,7 +135,7 @@ class IdfPreparer:
 
     def _prepare_common(
         self,
-        cfg: MpcConfig,
+        config: MpcConfig,
         run_idf_path: str | Path,
     ) -> tuple[IDF, Path, str]:
         """
@@ -144,11 +144,11 @@ class IdfPreparer:
         MPC edits (run period, timestep, zone temperature output). Returns the
         open IDF (not yet saved), the resolved run path, and the zone name.
         """
-        base_path = self.ensure_base_idf(cfg)
+        base_path = self.ensure_base_idf(config)
         run_idf_path = Path(run_idf_path)
         run_idf_path.parent.mkdir(parents=True, exist_ok=True)
 
-        edit_config = load_idf_edit_config(cfg.paths.idf_edit_config)
+        edit_config = load_idf_edit_config(config.paths.idf_edit_config)
         self._editor.edit_idf(
             input_path=base_path,
             output_path=run_idf_path,
@@ -156,11 +156,11 @@ class IdfPreparer:
         )
 
         idf = IDF(str(run_idf_path))
-        zone_name = self._resolve_zone_name(idf, cfg.selection.zone_name)
+        zone_name = self._resolve_zone_name(idf, config.selection.zone_name)
 
-        self._edit_run_period(idf, cfg)
-        self._edit_timestep(idf, cfg)
-        self._add_zone_temp_output(idf, zone_name, cfg)
+        self._edit_run_period(idf, config)
+        self._edit_timestep(idf, config)
+        self._add_zone_temp_output(idf, zone_name, config)
 
         return idf, run_idf_path, zone_name
 
@@ -207,16 +207,16 @@ class IdfPreparer:
     # IDF edits
     # ------------------------------------------------------------------ #
 
-    def _edit_run_period(self, idf: IDF, cfg: MpcConfig) -> None:
+    def _edit_run_period(self, idf: IDF, config: MpcConfig) -> None:
         run_periods = idf.idfobjects["RUNPERIOD"]
         if not run_periods:
             raise ValueError("No RunPeriod object found in IDF.")
 
-        start = cfg.window.start
+        start = config.window.start
         # RunPeriod is day-granular; cover the calendar days the window touches.
         # The window is [start, start + duration); its last touched day is the
         # day containing (end - 1s).
-        last_instant = cfg.window.end - timedelta(seconds=1)
+        last_instant = config.window.end - timedelta(seconds=1)
 
         rp = run_periods[0]
         rp.Begin_Month = start.month
@@ -230,15 +230,15 @@ class IdfPreparer:
         for extra in run_periods[1:]:
             idf.removeidfobject(extra)
 
-    def _edit_timestep(self, idf: IDF, cfg: MpcConfig) -> None:
+    def _edit_timestep(self, idf: IDF, config: MpcConfig) -> None:
         timesteps = idf.idfobjects["TIMESTEP"]
         if not timesteps:
             idf.newidfobject(
                 "TIMESTEP",
-                Number_of_Timesteps_per_Hour=cfg.control.timesteps_per_hour,
+                Number_of_Timesteps_per_Hour=config.control.timesteps_per_hour,
             )
             return
-        timesteps[0].Number_of_Timesteps_per_Hour = cfg.control.timesteps_per_hour
+        timesteps[0].Number_of_Timesteps_per_Hour = config.control.timesteps_per_hour
 
     def _add_injection_equipment(self, idf: IDF, zone_name: str) -> None:
         """
@@ -325,7 +325,7 @@ class IdfPreparer:
         self,
         idf: IDF,
         zone_name: str,
-        cfg: MpcConfig,
+        config: MpcConfig,
     ) -> None:
         # Avoid duplicating an identical request if the base IDF already has one.
         for obj in idf.idfobjects["OUTPUT:VARIABLE"]:

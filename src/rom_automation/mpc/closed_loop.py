@@ -41,7 +41,7 @@ _MODEL_PARAM_KEYS = (
 )
 
 
-def run_mpc_closed_loop(cfg: MpcConfig) -> None:
+def run_mpc_closed_loop(config: MpcConfig) -> None:
     """
     Run a closed-loop MPC simulation: the LP MPC (using the identified 4R2C model)
     drives HVAC thermal power injected into the live EnergyPlus building, over the
@@ -53,36 +53,36 @@ def run_mpc_closed_loop(cfg: MpcConfig) -> None:
         log_file=Path("logs") / "run_mpc.log",
     )
 
-    params, observer_block = _load_model(cfg.resolved_model_path())
-    logger.info("Loaded identified 4R2C model from %s", cfg.resolved_model_path())
+    params, observer_block = _load_model(config.resolved_model_path())
+    logger.info("Loaded identified 4R2C model from %s", config.resolved_model_path())
     kalman_gain = _resolve_observer_gain(
-        params=params, cfg=cfg, observer_block=observer_block, logger=logger
+        params=params, config=config, observer_block=observer_block, logger=logger
     )
 
-    df = _load_processed_csv(cfg)
+    df = _load_processed_csv(config)
     logger.info("Loaded disturbance CSV with %d rows.", len(df))
 
     # Optionally set the MPC power bound to the real HVAC max sensible cooling
     # (measured by a full-tilt E+ pass). This bound also normalizes the power
     # zones used by the supervisory setpoint mapping.
-    if cfg.control.auto_capacity:
-        capacity_kw = calibrate_max_sensible_cooling_kw(cfg, logger)
-        cfg = dataclasses.replace(
-            cfg,
-            control=dataclasses.replace(cfg.control, p_hvac_max_kw=capacity_kw),
+    if config.control.auto_capacity:
+        capacity_kw = calibrate_max_sensible_cooling_kw(config, logger)
+        config = dataclasses.replace(
+            config,
+            control=dataclasses.replace(config.control, p_hvac_max_kw=capacity_kw),
         )
         logger.info("Using calibrated p_hvac_max_kw = %.3f kW", capacity_kw)
     else:
-        logger.info("Using configured p_hvac_max_kw = %.3f kW", cfg.control.p_hvac_max_kw)
+        logger.info("Using configured p_hvac_max_kw = %.3f kW", config.control.p_hvac_max_kw)
 
-    output_dir = cfg.output_dir()
+    output_dir = config.output_dir()
     output_dir.mkdir(parents=True, exist_ok=True)
     eplus_out_dir = output_dir / "eplus"
-    stamp = cfg.window.start.strftime("%Y%m%dT%H%M")
+    stamp = config.window.start.strftime("%Y%m%dT%H%M")
     run_idf_path = output_dir / f"run_{stamp}.idf"
 
-    preparer = IdfPreparer(idd_path=cfg.energyplus.idd_path)
-    prepared = preparer.prepare_run_idf(cfg, run_idf_path=run_idf_path)
+    preparer = IdfPreparer(idd_path=config.energyplus.idd_path)
+    prepared = preparer.prepare_run_idf(config, run_idf_path=run_idf_path)
     logger.info(
         "Prepared run IDF %s (zone=%s, equipment=%s).",
         prepared.run_idf_path,
@@ -92,38 +92,38 @@ def run_mpc_closed_loop(cfg: MpcConfig) -> None:
 
     controller = MpcController(
         params=params,
-        control=cfg.control,
-        objective=cfg.objective,
+        control=config.control,
+        objective=config.objective,
     )
-    runner = FourR2CRunner(params=params, dt_seconds=cfg.control.dt_seconds)
+    runner = FourR2CRunner(params=params, dt_seconds=config.control.dt_seconds)
 
     orchestrator = _ClosedLoopOrchestrator(
-        cfg=cfg,
+        config=config,
         controller=controller,
         runner=runner,
         disturbance=DisturbanceProvider(
             df=df,
-            dt_seconds=cfg.control.dt_seconds,
-            tou=cfg.tou,
-            comfort=cfg.comfort,
+            dt_seconds=config.control.dt_seconds,
+            tou=config.tou,
+            comfort=config.comfort,
         ),
-        init_walls=_initial_walls(cfg=cfg, params=params, df=df),
+        init_walls=_initial_walls(config=config, params=params, df=df),
         kalman_gain=kalman_gain,
         logger=logger,
     )
 
     plant = EnergyPlusPlant(
-        install_dir=cfg.energyplus.install_dir,
-        weather_path=cfg.paths.weather,
+        install_dir=config.energyplus.install_dir,
+        weather_path=config.paths.weather,
         zone_name=prepared.zone_name,
-        dt_seconds=cfg.control.dt_seconds,
-        calendar_year=cfg.window.start.year,
-        actuation_mode=cfg.actuation.mode,
-        equipment_name=prepared.equipment_name if cfg.is_direct_power else None,
-        setpoint_deadband_c=cfg.actuation.setpoint_deadband_c,
+        dt_seconds=config.control.dt_seconds,
+        calendar_year=config.window.start.year,
+        actuation_mode=config.actuation.mode,
+        equipment_name=prepared.equipment_name if config.is_direct_power else None,
+        setpoint_deadband_c=config.actuation.setpoint_deadband_c,
     )
 
-    logger.info("Actuation mode: %s", cfg.actuation.mode)
+    logger.info("Actuation mode: %s", config.actuation.mode)
 
     logger.info("Starting EnergyPlus closed-loop run...")
     plant.run(
@@ -139,7 +139,7 @@ def run_mpc_closed_loop(cfg: MpcConfig) -> None:
     logger.info("Wrote closed-loop results: %s", results_path)
 
     summary = _build_summary(
-        cfg=cfg,
+        config=config,
         prepared=prepared,
         results_df=results_df,
         results_path=results_path,
@@ -172,7 +172,7 @@ class _ClosedLoopOrchestrator:
 
     def __init__(
         self,
-        cfg: MpcConfig,
+        config: MpcConfig,
         controller: MpcController,
         runner: FourR2CRunner,
         disturbance: DisturbanceProvider,
@@ -180,7 +180,7 @@ class _ClosedLoopOrchestrator:
         kalman_gain: np.ndarray,
         logger,
     ) -> None:
-        self.cfg = cfg
+        self.config = config
         self.controller = controller
         self.runner = runner
         self.disturbance = disturbance
@@ -201,14 +201,14 @@ class _ClosedLoopOrchestrator:
         obs: PlantObservation,
     ) -> float | None:
         ts = pd.Timestamp(interval_start)
-        window_start = pd.Timestamp(self.cfg.window.start)
-        window_end = pd.Timestamp(self.cfg.window.end)
+        window_start = pd.Timestamp(self.config.window.start)
+        window_end = pd.Timestamp(self.config.window.end)
 
         if ts < window_start or ts >= window_end:
             return None  # outside the acting window -> plant applies nothing
 
         t_in_measured_c = obs.t_in_c
-        horizon = self.disturbance.horizon(interval_start, self.cfg.control.horizon_steps)
+        horizon = self.disturbance.horizon(interval_start, self.config.control.horizon_steps)
 
         # State observer: predict from the previous posterior + previously-applied
         # input, then correct all three states from the T_in measurement.
@@ -226,7 +226,7 @@ class _ClosedLoopOrchestrator:
         #                        conditioning is the heat pump's delivered sensible
         #                        power, read back from the plant (obs.hvac_power_kw,
         #                        a one-step-lagged causal estimate).
-        if self.cfg.is_direct_power:
+        if self.config.is_direct_power:
             command: float = sol.p_hvac_applied_kw
             command_kind = "power_kw"
             conditioning_power_kw = sol.p_hvac_applied_kw
@@ -287,7 +287,7 @@ class _ClosedLoopOrchestrator:
         pred_state = self.runner.model.step(
             state=FourR2CState.from_vector(self._x_hat),
             inp=self._prev_input,
-            dt_seconds=self.cfg.control.dt_seconds,
+            dt_seconds=self.config.control.dt_seconds,
         )
         x_pred = pred_state.as_vector()
         t_in_apriori = float(x_pred[0])
@@ -311,8 +311,8 @@ class _ClosedLoopOrchestrator:
         t_plan = sol.t_in_plan_c
         h = len(p_plan)
 
-        p_max = self.cfg.control.p_hvac_max_kw
-        n_zones = self.cfg.actuation.num_power_zones
+        p_max = self.config.control.p_hvac_max_kw
+        n_zones = self.config.actuation.num_power_zones
 
         z0 = _power_zone(p_plan[0], p_max, n_zones)
         run_len = 1
@@ -320,13 +320,13 @@ class _ClosedLoopOrchestrator:
             run_len += 1
 
         # Floor the lookahead so a very brief regime still clears the deadband.
-        lookahead = min(max(run_len, self.cfg.actuation.min_lookahead_steps), h)
+        lookahead = min(max(run_len, self.config.actuation.min_lookahead_steps), h)
         idx = lookahead - 1
 
         target = float(t_plan[idx])
         # Clamp into the comfort band shrunk by half the deadband, so the deadband
         # slop around the setpoint still lands inside comfort.
-        half_db = 0.5 * self.cfg.actuation.setpoint_deadband_c
+        half_db = 0.5 * self.config.actuation.setpoint_deadband_c
         lo = horizon.comfort_lower_c[idx] + half_db
         hi = horizon.comfort_upper_c[idx] - half_db
         if lo > hi:  # deadband wider than the comfort band -> aim at its center
@@ -353,7 +353,7 @@ class _ClosedLoopOrchestrator:
             return pd.DataFrame(columns=self._COLUMNS)
 
         df = pd.DataFrame(self.records)
-        dt_hours = self.cfg.control.dt_seconds / 3600.0
+        dt_hours = self.config.control.dt_seconds / 3600.0
 
         under = df["comfort_lower_c"] - df["t_in_measured_c"]
         over = df["t_in_measured_c"] - df["comfort_upper_c"]
@@ -430,7 +430,7 @@ def _load_model(model_path: Path) -> tuple[FourR2CParameters, dict | None]:
 
 def _resolve_observer_gain(
     params: FourR2CParameters,
-    cfg: MpcConfig,
+    config: MpcConfig,
     observer_block: dict | None,
     logger,
 ) -> np.ndarray:
@@ -451,9 +451,9 @@ def _resolve_observer_gain(
     q_temp = np.asarray(observer_block["q_temp"], dtype=float)
     r = float(observer_block["r"])
     innovation_std = float(observer_block["innovation_std_c"])
-    obs_dt = float(observer_block.get("dt_seconds", cfg.control.dt_seconds))
+    obs_dt = float(observer_block.get("dt_seconds", config.control.dt_seconds))
 
-    dt = cfg.control.dt_seconds
+    dt = config.control.dt_seconds
     if abs(dt - obs_dt) > 1e-6:
         logger.warning(
             "Observer Q was built at dt=%.1fs but control dt=%.1fs; the stored Q "
@@ -465,8 +465,8 @@ def _resolve_observer_gain(
     disc = FourR2CModel(params=params).discretize(dt)
 
     try:
-        if cfg.observer.mode == "fixed":
-            f = cfg.observer.inflation_factor
+        if config.observer.mode == "fixed":
+            f = config.observer.inflation_factor
             k = steady_state_kalman_gain(disc.a_d, disc.c, f * q_temp, r)
         else:  # innovation_consistency
             k, f = innovation_consistent_gain(
@@ -482,16 +482,16 @@ def _resolve_observer_gain(
     logger.info(
         "State observer: mode=%s, Q-inflation=%.4g, innovation_std=%.3f degC, "
         "gain [T_in, T_iw, T_ow]=[%.4f, %.4f, %.4f]",
-        cfg.observer.mode, f, innovation_std, gain[0], gain[1], gain[2],
+        config.observer.mode, f, innovation_std, gain[0], gain[1], gain[2],
     )
     return gain
 
 
-def _load_processed_csv(cfg: MpcConfig) -> pd.DataFrame:
+def _load_processed_csv(config: MpcConfig) -> pd.DataFrame:
     csv_path = (
-        cfg.paths.processed_root
-        / cfg.selection.city
-        / f"{cfg.selection.house_name}{_EDITED_SUFFIX}"
+        config.paths.processed_root
+        / config.selection.city
+        / f"{config.selection.house_name}{_EDITED_SUFFIX}"
         / _PROCESSED_FILENAME
     )
     if not csv_path.exists():
@@ -505,7 +505,7 @@ def _load_processed_csv(cfg: MpcConfig) -> pd.DataFrame:
 
 
 def _initial_walls(
-    cfg: MpcConfig,
+    config: MpcConfig,
     params: FourR2CParameters,
     df: pd.DataFrame,
 ) -> tuple[float, float]:
@@ -514,8 +514,8 @@ def _initial_walls(
     window: steady-state seed + anchored burn-in (warm_start_walls), reconstructed
     from this run's own recent data using the identified parameters.
     """
-    start = pd.Timestamp(cfg.window.start)
-    history_start = start - pd.Timedelta(hours=cfg.history_hours)
+    start = pd.Timestamp(config.window.start)
+    history_start = start - pd.Timedelta(hours=config.history_hours)
     history_df = df.loc[(df.index >= history_start) & (df.index < start)]
 
     if len(history_df) == 0:
@@ -535,7 +535,7 @@ def _initial_walls(
         history_inputs=build_input_sequence(history_df),
         history_t_in_c=history_df["T_zone_C"].to_numpy(dtype=float),
         t_in_0_c=t_in_0,
-        dt_seconds=cfg.control.dt_seconds,
+        dt_seconds=config.control.dt_seconds,
     )
     return result.initial_condition.t_iw_0_c, result.initial_condition.t_ow_0_c
 
@@ -546,12 +546,12 @@ def _initial_walls(
 
 
 def _build_summary(
-    cfg: MpcConfig,
+    config: MpcConfig,
     prepared: PreparedIdf,
     results_df: pd.DataFrame,
     results_path: Path,
 ) -> dict:
-    dt_hours = cfg.control.dt_seconds / 3600.0
+    dt_hours = config.control.dt_seconds / 3600.0
 
     setpoint_tracking_rmse = float("nan")
     if len(results_df) > 0:
@@ -570,7 +570,7 @@ def _build_summary(
         max_viol = float(viol.max())
 
         # Supervisory mode: how well did the real HVAC track the commanded setpoint?
-        if cfg.is_supervisory:
+        if config.is_supervisory:
             track_err = results_df["t_in_measured_c"] - results_df["mpc_command"]
             setpoint_tracking_rmse = float(np.sqrt(np.mean(np.square(track_err))))
     else:
@@ -583,38 +583,38 @@ def _build_summary(
 
     return {
         "selection": {
-            "city": cfg.selection.city,
-            "house_name": cfg.selection.house_name,
+            "city": config.selection.city,
+            "house_name": config.selection.house_name,
             "zone_name": prepared.zone_name,
         },
         "window": {
-            "start": cfg.window.start.isoformat(),
-            "end": cfg.window.end.isoformat(),
-            "duration_hours": cfg.window.duration_hours,
+            "start": config.window.start.isoformat(),
+            "end": config.window.end.isoformat(),
+            "duration_hours": config.window.duration_hours,
         },
         "control": {
-            "dt_minutes": cfg.control.dt_minutes,
-            "horizon_steps": cfg.control.horizon_steps,
-            "p_hvac_max_kw": cfg.control.p_hvac_max_kw,
+            "dt_minutes": config.control.dt_minutes,
+            "horizon_steps": config.control.horizon_steps,
+            "p_hvac_max_kw": config.control.p_hvac_max_kw,
         },
-        "comfort": {"lower_c": cfg.comfort.lower_c, "upper_c": cfg.comfort.upper_c},
+        "comfort": {"lower_c": config.comfort.lower_c, "upper_c": config.comfort.upper_c},
         "tou": {
-            "default_rate": cfg.tou.default_rate,
+            "default_rate": config.tou.default_rate,
             "windows": [
                 {"start_hour": w.start_hour, "end_hour": w.end_hour, "rate": w.rate}
-                for w in cfg.tou.windows
+                for w in config.tou.windows
             ],
         },
         "objective": {
-            "w_energy": cfg.objective.w_energy,
-            "w_comfort": cfg.objective.w_comfort,
+            "w_energy": config.objective.w_energy,
+            "w_comfort": config.objective.w_comfort,
         },
         "actuation": {
-            "mode": cfg.actuation.mode,
-            "setpoint_deadband_c": cfg.actuation.setpoint_deadband_c,
-            "disable_native_hvac": cfg.disable_native_hvac if cfg.is_direct_power else False,
+            "mode": config.actuation.mode,
+            "setpoint_deadband_c": config.actuation.setpoint_deadband_c,
+            "disable_native_hvac": config.disable_native_hvac if config.is_direct_power else False,
         },
-        "model_path": str(cfg.resolved_model_path()),
+        "model_path": str(config.resolved_model_path()),
         "run_idf_path": str(prepared.run_idf_path),
         "results_csv_path": str(results_path),
         "kpis": {

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from rom_automation.epconfig.loader import load_simulation_config
 from rom_automation.workflows.run_epsimulations import run_simulations_workflow
 
 
@@ -25,7 +26,8 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
-    run_simulations_workflow(config_path=args.config)
+    config = load_simulation_config(args.config)
+    run_simulations_workflow(config=config)
 
 
 if __name__ == "__main__":

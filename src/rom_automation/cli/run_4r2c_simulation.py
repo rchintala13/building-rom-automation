@@ -27,8 +27,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
-    cfg = load_simulation_config(args.config)
-    run_4r2c_simulation_workflow(cfg=cfg)
+    config = load_simulation_config(args.config)
+    run_4r2c_simulation_workflow(config=config)
 
 
 if __name__ == "__main__":

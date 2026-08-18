@@ -25,8 +25,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
-    cfg = load_mpc_config(args.config)
-    run_mpc_closed_loop(cfg=cfg)
+    config = load_mpc_config(args.config)
+    run_mpc_closed_loop(config=config)
 
 
 if __name__ == "__main__":
