@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from rom_automation.epconfig.loader import load_processing_config
+from rom_automation.epconfig.types import ProcessingConfig
 from rom_automation.logging_utils import get_logger
 from rom_automation.processing.column_mapper import rename_energyplus_columns
 from rom_automation.processing.feature_builder import build_features
@@ -18,13 +18,11 @@ from rom_automation.processing.resampler import (
 )
 
 
-def run_process_energyplus_outputs_workflow(config_path: str | Path) -> None:
+def run_process_energyplus_outputs_workflow(config: ProcessingConfig) -> None:
     """
     Process one or more EnergyPlus output CSV files into standardized
-    5-minute and 1-hour training datasets using a YAML config.
+    5-minute and 1-hour training datasets from a typed processing config.
     """
-    config = load_processing_config(config_path)
-
     logger = get_logger(
         "rom_automation.process_energyplus_outputs",
         log_file=Path("logs") / "process_energyplus_outputs.log",

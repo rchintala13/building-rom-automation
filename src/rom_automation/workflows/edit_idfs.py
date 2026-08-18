@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from rom_automation.epconfig.loader import load_idf_edit_config
+from rom_automation.epconfig.types import IDFEditConfig
 from rom_automation.perturbation.file_selector import select_idf_files
 from rom_automation.perturbation.idf_editor import IDFEditor
 
 
 def run_edit_idfs_workflow(
-    config_path: str | Path,
+    config: IDFEditConfig,
     idd_path: str | Path,
 ) -> None:
     """
@@ -16,12 +16,10 @@ def run_edit_idfs_workflow(
 
     Steps
     -----
-    1. Load YAML config
-    2. Select one or more input IDF files
-    3. Build output paths for edited IDFs
-    4. Apply edits and save outputs
+    1. Select one or more input IDF files
+    2. Build output paths for edited IDFs
+    3. Apply edits and save outputs
     """
-    config = load_idf_edit_config(config_path)
     input_files = select_idf_files(config)
 
     editor = IDFEditor(idd_path=idd_path)

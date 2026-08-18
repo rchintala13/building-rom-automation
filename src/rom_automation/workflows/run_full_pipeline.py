@@ -33,13 +33,13 @@ def run_full_pipeline(
     _validate_selection_consistency(edit_cfg.selection, sim_cfg.selection, proc_cfg.selection)
 
     print("--- Step 1/3: Editing IDFs ---")
-    run_edit_idfs_workflow(config_path=edit_config_path, idd_path=idd_path)
+    run_edit_idfs_workflow(config=edit_cfg, idd_path=idd_path)
 
     print("--- Step 2/3: Running EnergyPlus simulations ---")
-    run_simulations_workflow(config_path=simulation_config_path)
+    run_simulations_workflow(config=sim_cfg)
 
     print("--- Step 3/3: Processing simulation outputs ---")
-    run_process_energyplus_outputs_workflow(config_path=processing_config_path)
+    run_process_energyplus_outputs_workflow(config=proc_cfg)
 
     print("--- Pipeline complete ---")
 

@@ -2,24 +2,21 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from rom_automation.epconfig.loader import load_simulation_config
+from rom_automation.epconfig.types import SimulationConfig
 from rom_automation.simulation.eplus_runner import EnergyPlusRunner
 from rom_automation.simulation.file_selector import select_edited_idf_files
 
 
-def run_simulations_workflow(config_path: str | Path) -> None:
+def run_simulations_workflow(config: SimulationConfig) -> None:
     """
     Run EnergyPlus simulations for one or more edited IDF files.
 
     Steps
     -----
-    1. Load simulation YAML config
-    2. Select one or more edited IDF files
-    3. Build output directory for each IDF
-    4. Run EnergyPlus
+    1. Select one or more edited IDF files
+    2. Build output directory for each IDF
+    3. Run EnergyPlus
     """
-    config = load_simulation_config(config_path)
-
     input_files = select_edited_idf_files(config)
     runner = EnergyPlusRunner(eplus_exe=config.simulation.eplus_exe)
 

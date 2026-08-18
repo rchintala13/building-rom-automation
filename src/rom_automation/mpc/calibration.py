@@ -17,7 +17,7 @@ _PIN_BELOW_C = 15.0
 
 
 def calibrate_max_sensible_cooling_kw(
-    cfg: MpcConfig,
+    config: MpcConfig,
     logger,
     use_cache: bool = True,
 ) -> float:
@@ -30,14 +30,14 @@ def calibrate_max_sensible_cooling_kw(
     The result is cached per (window, timestep) under the output dir so repeat
     runs reuse it. Delete `hvac_capacity.json` to force a recompute.
     """
-    output_dir = cfg.output_dir()
+    output_dir = config.output_dir()
     output_dir.mkdir(parents=True, exist_ok=True)
     cache_path = output_dir / _CACHE_FILENAME
 
     cache_key = {
-        "window_start": cfg.window.start.isoformat(),
-        "window_end": cfg.window.end.isoformat(),
-        "dt_minutes": cfg.control.dt_minutes,
+        "window_start": config.window.start.isoformat(),
+        "window_end": config.window.end.isoformat(),
+        "dt_minutes": config.control.dt_minutes,
     }
 
     if use_cache and cache_path.exists():
@@ -53,13 +53,13 @@ def calibrate_max_sensible_cooling_kw(
 
     logger.info("Calibrating HVAC max sensible cooling (full-tilt EnergyPlus pass)...")
 
-    preparer = IdfPreparer(idd_path=cfg.energyplus.idd_path)
+    preparer = IdfPreparer(idd_path=config.energyplus.idd_path)
     cal_idf_path = output_dir / "calibration.idf"
-    prepared = preparer.prepare_calibration_idf(cfg, run_idf_path=cal_idf_path)
+    prepared = preparer.prepare_calibration_idf(config, run_idf_path=cal_idf_path)
 
-    pinned_setpoint_c = cfg.comfort.lower_c - _PIN_BELOW_C
-    window_start = pd.Timestamp(cfg.window.start)
-    window_end = pd.Timestamp(cfg.window.end)
+    pinned_setpoint_c = config.comfort.lower_c - _PIN_BELOW_C
+    window_start = pd.Timestamp(config.window.start)
+    window_end = pd.Timestamp(config.window.end)
     peak = {"cooling_kw": 0.0}
 
     def step_fn(ts: datetime, obs: PlantObservation):
@@ -74,13 +74,13 @@ def calibrate_max_sensible_cooling_kw(
         return None
 
     plant = EnergyPlusPlant(
-        install_dir=cfg.energyplus.install_dir,
-        weather_path=cfg.paths.weather,
+        install_dir=config.energyplus.install_dir,
+        weather_path=config.paths.weather,
         zone_name=prepared.zone_name,
-        dt_seconds=cfg.control.dt_seconds,
-        calendar_year=cfg.window.start.year,
+        dt_seconds=config.control.dt_seconds,
+        calendar_year=config.window.start.year,
         actuation_mode="supervisory_setpoint",
-        setpoint_deadband_c=cfg.actuation.setpoint_deadband_c,
+        setpoint_deadband_c=config.actuation.setpoint_deadband_c,
     )
     plant.run(
         run_idf_path=prepared.run_idf_path,

@@ -24,17 +24,17 @@ _PROCESSED_FILENAME = "processed_5min.csv"
 
 
 def run_4r2c_simulation_workflow(
-    cfg: SimulationConfig,
+    config: SimulationConfig,
 ) -> None:
     """
     Run a 4R2C prediction workflow driven by a typed simulation config.
 
     Steps:
-      1. Load identified model parameters from `cfg.model.path`.
+      1. Load identified model parameters from `config.model.path`.
       2. Load the input CSV (either from the processed data folder or a
          user-supplied custom CSV).
       3. Slice out the history window (n hours before start) and the
-         simulation window (`cfg.window`).
+         simulation window (`config.window`).
       4. Initialize wall temperatures via history means + user alphas.
       5. Run the requested prediction mode.
       6. Write outputs (predictions, and measured values for one_step/n_step)
@@ -45,10 +45,10 @@ def run_4r2c_simulation_workflow(
         log_file=Path("logs") / "run_4r2c_simulation.log",
     )
 
-    params = _load_model_parameters(cfg.model.path)
-    logger.info("Loaded model parameters from %s", cfg.model.path)
+    params = _load_model_parameters(config.model.path)
+    logger.info("Loaded model parameters from %s", config.model.path)
 
-    input_csv_path = _resolve_input_csv(cfg)
+    input_csv_path = _resolve_input_csv(config)
     logger.info("Reading input CSV: %s", input_csv_path)
     df = _read_input_csv(input_csv_path)
 
@@ -57,9 +57,9 @@ def run_4r2c_simulation_workflow(
 
     history_df, segment_df = _slice_history_and_segment(
         df=df,
-        start=cfg.window.start,
-        duration_hours=cfg.window.duration_hours,
-        history_hours=cfg.history_hours,
+        start=config.window.start,
+        duration_hours=config.window.duration_hours,
+        history_hours=config.history_hours,
         dt_seconds=dt_seconds,
     )
     logger.info(
@@ -92,11 +92,11 @@ def run_4r2c_simulation_workflow(
         warm_start.seed_t_ow_c,
     )
 
-    output_dir = _build_output_dir(cfg)
+    output_dir = _build_output_dir(config)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     output_df = _run_and_build_output(
-        cfg=cfg,
+        config=config,
         runner=runner,
         initial_state=initial_state,
         inputs=inputs,
@@ -104,8 +104,8 @@ def run_4r2c_simulation_workflow(
         timestamps=segment_df.index,
     )
 
-    output_path = _build_output_path(cfg=cfg, output_dir=output_dir)
-    logger.info("Writing %s output: %s", cfg.mode.kind, output_path)
+    output_path = _build_output_path(config=config, output_dir=output_dir)
+    logger.info("Writing %s output: %s", config.mode.kind, output_path)
     output_df.to_csv(output_path, index=False)
 
     summary_path = output_dir / "simulation_summary.json"
@@ -113,7 +113,7 @@ def run_4r2c_simulation_workflow(
     with summary_path.open("w", encoding="utf-8") as f:
         json.dump(
             _build_summary(
-                cfg=cfg,
+                config=config,
                 params=params,
                 wall_init_seed={
                     "t_iw_c": warm_start.seed_t_iw_c,
@@ -174,17 +174,17 @@ def _load_model_parameters(model_path: Path) -> FourR2CParameters:
 
 
 
-def _resolve_input_csv(cfg: SimulationConfig) -> Path:
-    if cfg.inputs.source == "processed":
+def _resolve_input_csv(config: SimulationConfig) -> Path:
+    if config.inputs.source == "processed":
         csv_path = (
-            cfg.paths.processed_root
-            / cfg.selection.city
-            / f"{cfg.selection.house_name}{_EDITED_SUFFIX}"
+            config.paths.processed_root
+            / config.selection.city
+            / f"{config.selection.house_name}{_EDITED_SUFFIX}"
             / _PROCESSED_FILENAME
         )
     else:
-        assert cfg.inputs.custom_path is not None  # loader enforces
-        csv_path = cfg.inputs.custom_path
+        assert config.inputs.custom_path is not None  # loader enforces
+        csv_path = config.inputs.custom_path
 
     if not csv_path.exists():
         raise FileNotFoundError(f"Input CSV not found: {csv_path}")
@@ -260,31 +260,31 @@ def _slice_history_and_segment(
     return history_df, segment_df
 
 
-def _build_output_dir(cfg: SimulationConfig) -> Path:
-    return cfg.paths.output_root / cfg.selection.city / cfg.selection.house_name
+def _build_output_dir(config: SimulationConfig) -> Path:
+    return config.paths.output_root / config.selection.city / config.selection.house_name
 
 
-def _build_output_path(cfg: SimulationConfig, output_dir: Path) -> Path:
+def _build_output_path(config: SimulationConfig, output_dir: Path) -> Path:
     """
     Output filenames encode mode + start timestamp so multiple runs against
     the same home don't clobber each other.
     """
-    stamp = cfg.window.start.strftime("%Y%m%dT%H%M")
-    if cfg.mode.kind == "n_step":
-        assert cfg.mode.n_steps_ahead is not None
-        return output_dir / f"n_step_{cfg.mode.n_steps_ahead}_{stamp}.csv"
-    return output_dir / f"{cfg.mode.kind}_{stamp}.csv"
+    stamp = config.window.start.strftime("%Y%m%dT%H%M")
+    if config.mode.kind == "n_step":
+        assert config.mode.n_steps_ahead is not None
+        return output_dir / f"n_step_{config.mode.n_steps_ahead}_{stamp}.csv"
+    return output_dir / f"{config.mode.kind}_{stamp}.csv"
 
 
 def _run_and_build_output(
-    cfg: SimulationConfig,
+    config: SimulationConfig,
     runner: FourR2CRunner,
     initial_state,
     inputs,
     measurements_t_in_c: np.ndarray,
     timestamps: pd.DatetimeIndex,
 ) -> pd.DataFrame:
-    if cfg.mode.kind == "simulation":
+    if config.mode.kind == "simulation":
         sim = runner.simulate(initial_state=initial_state, inputs=inputs)
         return pd.DataFrame(
             {
@@ -295,7 +295,7 @@ def _run_and_build_output(
             }
         )
 
-    if cfg.mode.kind == "one_step":
+    if config.mode.kind == "one_step":
         pred = runner.one_step_predict(
             initial_state=initial_state,
             inputs=inputs,
@@ -309,15 +309,15 @@ def _run_and_build_output(
             }
         )
 
-    if cfg.mode.kind == "n_step":
-        assert cfg.mode.n_steps_ahead is not None
+    if config.mode.kind == "n_step":
+        assert config.mode.n_steps_ahead is not None
         pred = runner.n_step_predict(
             initial_state=initial_state,
             inputs=inputs,
             measurements_t_in_c=measurements_t_in_c,
-            n_steps_ahead=cfg.mode.n_steps_ahead,
+            n_steps_ahead=config.mode.n_steps_ahead,
         )
-        col = f"t_in_pred_n_step_{cfg.mode.n_steps_ahead}_c"
+        col = f"t_in_pred_n_step_{config.mode.n_steps_ahead}_c"
         return pd.DataFrame(
             {
                 "timestamp": list(timestamps),
@@ -326,11 +326,11 @@ def _run_and_build_output(
             }
         )
 
-    raise ValueError(f"Unknown mode kind: {cfg.mode.kind!r}")
+    raise ValueError(f"Unknown mode kind: {config.mode.kind!r}")
 
 
 def _build_summary(
-    cfg: SimulationConfig,
+    config: SimulationConfig,
     params: FourR2CParameters,
     wall_init_seed: dict,
     initial_state_dict: dict,
@@ -342,31 +342,31 @@ def _build_summary(
 ) -> dict:
     return {
         "mode": {
-            "kind": cfg.mode.kind,
-            "n_steps_ahead": cfg.mode.n_steps_ahead,
+            "kind": config.mode.kind,
+            "n_steps_ahead": config.mode.n_steps_ahead,
         },
         "selection": {
-            "city": cfg.selection.city,
-            "house_name": cfg.selection.house_name,
+            "city": config.selection.city,
+            "house_name": config.selection.house_name,
         },
         "window": {
-            "start": cfg.window.start.isoformat(),
-            "duration_hours": cfg.window.duration_hours,
+            "start": config.window.start.isoformat(),
+            "duration_hours": config.window.duration_hours,
             "end": (
-                cfg.window.start
-                + timedelta(hours=cfg.window.duration_hours)
+                config.window.start
+                + timedelta(hours=config.window.duration_hours)
             ).isoformat(),
         },
-        "history_hours": cfg.history_hours,
+        "history_hours": config.history_hours,
         "wall_init": {
             "method": "warm_start",
             "steady_state_seed": wall_init_seed,
         },
         "inputs": {
-            "source": cfg.inputs.source,
+            "source": config.inputs.source,
             "csv_path": str(input_csv_path),
         },
-        "model_path": str(cfg.model.path),
+        "model_path": str(config.model.path),
         "model_parameters": asdict(params),
         "initial_state": initial_state_dict,
         "timestep_seconds": dt_seconds,

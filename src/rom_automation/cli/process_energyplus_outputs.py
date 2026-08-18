@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from rom_automation.epconfig.loader import load_processing_config
 from rom_automation.workflows.process_energyplus_outputs import (
     run_process_energyplus_outputs_workflow,
 )
@@ -30,7 +31,8 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
-    run_process_energyplus_outputs_workflow(config_path=args.config)
+    config = load_processing_config(args.config)
+    run_process_energyplus_outputs_workflow(config=config)
 
 
 if __name__ == "__main__":

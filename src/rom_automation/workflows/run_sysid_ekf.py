@@ -26,27 +26,32 @@ from rom_automation.sysid.trainer import (
     SegmentResult,
 )
 
+_EDITED_SUFFIX = "__edited"
+_PROCESSED_FILENAME = "processed_5min.csv"
+
 
 def run_sysid_ekf_workflow(
-    processed_csv_path: str | Path,
-    output_dir: str | Path,
-    cfg: SysIDConfig,
+    config: SysIDConfig,
     config_path: str | Path | None = None,
 ) -> None:
     """
-    Run end-to-end EKF-based system identification from one processed CSV.
+    Run end-to-end EKF-based system identification.
 
     Parameters
     ----------
-    processed_csv_path
-        Path to processed CSV, typically processed_5min.csv.
-    output_dir
-        Directory where sysid results will be written.
-    cfg
-        Strongly-typed sysid configuration (see config_types.SysIDConfig).
+    config
+        Strongly-typed sysid configuration (see config_types.SysIDConfig). The
+        processed-CSV input and the output directory are derived from it.
+    config_path
+        Optional path to the raw config file, logged as an MLflow artifact.
     """
-    processed_csv_path = Path(processed_csv_path)
-    output_dir = Path(output_dir)
+    processed_csv_path = (
+        config.paths.processed_root
+        / config.selection.city
+        / f"{config.selection.house_name}{_EDITED_SUFFIX}"
+        / _PROCESSED_FILENAME
+    )
+    output_dir = config.paths.output_root / config.selection.city / config.selection.house_name
     output_dir.mkdir(parents=True, exist_ok=True)
 
     logger = get_logger(
@@ -55,17 +60,20 @@ def run_sysid_ekf_workflow(
     )
 
     if not processed_csv_path.exists():
-        raise FileNotFoundError(f"Processed CSV not found: {processed_csv_path}")
+        raise FileNotFoundError(
+            f"Processed CSV not found: {processed_csv_path}. "
+            "Run the processing workflow first."
+        )
 
     logger.info("Reading processed CSV: %s", processed_csv_path)
     df = pd.read_csv(processed_csv_path, parse_dates=["timestamp"], index_col="timestamp")
 
     split_dataset = build_sysid_split_dataset(
         df=df,
-        history_hours=cfg.dataset.history_hours,
-        train_fraction=cfg.dataset.splits.train,
-        val_fraction=cfg.dataset.splits.val,
-        test_fraction=cfg.dataset.splits.test,
+        history_hours=config.dataset.history_hours,
+        train_fraction=config.dataset.splits.train,
+        val_fraction=config.dataset.splits.val,
+        test_fraction=config.dataset.splits.test,
     )
     timestep_seconds = split_dataset.timestep_seconds
     logger.info("Detected timestep: %s seconds", timestep_seconds)
@@ -80,26 +88,26 @@ def run_sysid_ekf_workflow(
     state_index = AugmentedStateIndex()
 
     ekf_noise_config = EKFNoiseConfig(
-        r=np.array([[cfg.ekf.r_value]], dtype=float),
-        p0_spec=cfg.ekf.p0,
-        process_noise_spec=cfg.ekf.process_noise,
+        r=np.array([[config.ekf.r_value]], dtype=float),
+        p0_spec=config.ekf.p0,
+        process_noise_spec=config.ekf.process_noise,
     )
 
     trainer = EKFSysIDTrainer(
         ekf_noise_config=ekf_noise_config,
         state_index=state_index,
         objective_weights=(
-            cfg.ekf.objective_weights.one_step,
-            cfg.ekf.objective_weights.n_step,
+            config.ekf.objective_weights.one_step,
+            config.ekf.objective_weights.n_step,
         ),
     )
 
     logger.info("Starting EKF sysid training.")
     result = trainer.train(
-        parameter_grid=cfg.parameter_grid,
+        parameter_grid=config.parameter_grid,
         split_dataset=split_dataset,
-        n_steps_ahead=cfg.ekf.n_steps_ahead,
-        bound_fractions=cfg.parameter_bounds,
+        n_steps_ahead=config.ekf.n_steps_ahead,
+        bound_fractions=config.parameter_bounds,
     )
     logger.info("Finished EKF sysid training.")
 
@@ -112,17 +120,17 @@ def run_sysid_ekf_workflow(
 
     summary = {
         "processed_csv_path": str(processed_csv_path),
-        "history_hours": cfg.dataset.history_hours,
+        "history_hours": config.dataset.history_hours,
         "timestep_seconds": timestep_seconds,
-        "n_steps_ahead": cfg.ekf.n_steps_ahead,
+        "n_steps_ahead": config.ekf.n_steps_ahead,
         "objective_weights": {
-            "one_step": cfg.ekf.objective_weights.one_step,
-            "n_step": cfg.ekf.objective_weights.n_step,
+            "one_step": config.ekf.objective_weights.one_step,
+            "n_step": config.ekf.objective_weights.n_step,
         },
         "splits": {
-            "train_fraction": cfg.dataset.splits.train,
-            "val_fraction": cfg.dataset.splits.val,
-            "test_fraction": cfg.dataset.splits.test,
+            "train_fraction": config.dataset.splits.train,
+            "val_fraction": config.dataset.splits.val,
+            "test_fraction": config.dataset.splits.test,
             "train_steps": len(split_dataset.train.inputs),
             "val_steps": (
                 len(split_dataset.val.inputs) if split_dataset.val is not None else 0
@@ -183,7 +191,7 @@ def run_sysid_ekf_workflow(
     model_payload["observer"] = _build_observer_block(
         params=final_identified_parameters,
         dt_seconds=timestep_seconds,
-        cfg=cfg,
+        config=config,
         innovation_std_c=float(selection_segment.metrics.rmse_one_step_c),
     )
 
@@ -233,7 +241,7 @@ def run_sysid_ekf_workflow(
     q_diag_df.to_csv(q_diag_path, index=False)
 
     # Optional MLflow experiment tracking (reads the artifacts just written).
-    log_sysid_run(output_dir=output_dir, cfg=cfg, config_path=config_path)
+    log_sysid_run(output_dir=output_dir, config=config, config_path=config_path)
 
     logger.info("EKF sysid workflow complete.")
 
@@ -248,7 +256,7 @@ def _metrics_to_dict(metrics) -> dict:
 def _build_observer_block(
     params: FourR2CParameters,
     dt_seconds: float,
-    cfg: SysIDConfig,
+    config: SysIDConfig,
     innovation_std_c: float,
 ) -> dict:
     """
@@ -260,15 +268,15 @@ def _build_observer_block(
     q_full = build_q_from_process_noise(
         params=params,
         dt_seconds=dt_seconds,
-        q_in_std_kw=cfg.ekf.process_noise.q_in_std_kw,
-        q_iw_std_kw=cfg.ekf.process_noise.q_iw_std_kw,
-        q_ow_std_kw=cfg.ekf.process_noise.q_ow_std_kw,
+        q_in_std_kw=config.ekf.process_noise.q_in_std_kw,
+        q_iw_std_kw=config.ekf.process_noise.q_iw_std_kw,
+        q_ow_std_kw=config.ekf.process_noise.q_ow_std_kw,
     )
     q_temp = q_full[0:3, 0:3]
 
     return {
         "q_temp": q_temp.tolist(),
-        "r": float(cfg.ekf.r_value),
+        "r": float(config.ekf.r_value),
         "dt_seconds": float(dt_seconds),
         "innovation_std_c": float(innovation_std_c),
     }

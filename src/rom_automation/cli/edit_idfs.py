@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from rom_automation.epconfig.loader import load_idf_edit_config
 from rom_automation.workflows.edit_idfs import run_edit_idfs_workflow
 
 
@@ -32,10 +33,8 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
-    run_edit_idfs_workflow(
-        config_path=args.config,
-        idd_path=args.idd,
-    )
+    config = load_idf_edit_config(args.config)
+    run_edit_idfs_workflow(config=config, idd_path=args.idd)
 
 
 if __name__ == "__main__":

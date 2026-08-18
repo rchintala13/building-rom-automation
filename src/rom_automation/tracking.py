@@ -9,7 +9,7 @@ from rom_automation.logging_utils import get_logger
 from rom_automation.sysid.config_types import SysIDConfig
 
 
-def sysid_model_attributes(cfg: SysIDConfig) -> dict[str, Any]:
+def sysid_model_attributes(config: SysIDConfig) -> dict[str, Any]:
     """
     Descriptors of *how* the model was produced and evaluated -- the "model
     attributes" that let you track methodological improvements across runs. As
@@ -23,13 +23,13 @@ def sysid_model_attributes(cfg: SysIDConfig) -> dict[str, Any]:
         "param_identification": "augmented_state_ekf",
         "candidate_selection_metric": "validation_objective",
         "observer_gain": "innovation_consistent_steady_state_kalman",
-        "n_step_horizon": cfg.ekf.n_steps_ahead,
+        "n_step_horizon": config.ekf.n_steps_ahead,
     }
 
 
 def log_sysid_run(
     output_dir: str | Path,
-    cfg: SysIDConfig,
+    config: SysIDConfig,
     config_path: str | Path | None = None,
 ) -> None:
     """
@@ -45,7 +45,7 @@ def log_sysid_run(
     run is never silently misattributed to a clean commit.
     """
     logger = get_logger("tracking.sysid")
-    if not cfg.tracking.enabled:
+    if not config.tracking.enabled:
         return
 
     try:
@@ -68,20 +68,20 @@ def log_sysid_run(
         )
         return
 
-    if cfg.tracking.tracking_uri:
-        mlflow.set_tracking_uri(cfg.tracking.tracking_uri)
-    mlflow.set_experiment(cfg.tracking.experiment_name)
+    if config.tracking.tracking_uri:
+        mlflow.set_tracking_uri(config.tracking.tracking_uri)
+    mlflow.set_experiment(config.tracking.experiment_name)
 
-    run_name = f"{cfg.selection.city}/{cfg.selection.house_name}"
+    run_name = f"{config.selection.city}/{config.selection.house_name}"
     with mlflow.start_run(run_name=run_name):
-        attrs = sysid_model_attributes(cfg)
+        attrs = sysid_model_attributes(config)
         mlflow.log_params({f"attr.{k}": v for k, v in attrs.items()})
         # Also expose the key method descriptors as tags for easy filtering.
         mlflow.set_tags(
             {
                 "run_type": "sysid",
-                "city": cfg.selection.city,
-                "house_name": cfg.selection.house_name,
+                "city": config.selection.city,
+                "house_name": config.selection.house_name,
                 "wall_init_method": attrs["wall_init_method"],
                 "validation_evaluation": attrs["validation_evaluation"],
             }
@@ -96,7 +96,7 @@ def log_sysid_run(
         for key, value in _environment_tags().items():
             mlflow.set_tag(key, value)
 
-        mlflow.log_params(_config_params(cfg, summary))
+        mlflow.log_params(_config_params(config, summary))
         mlflow.log_metrics(_sysid_metrics(summary, model))
 
         for name in ("sysid_summary.json", "model.json"):
@@ -114,7 +114,7 @@ def log_sysid_run(
 
     logger.info(
         "Logged sysid run to MLflow experiment '%s' (%s).",
-        cfg.tracking.experiment_name,
+        config.tracking.experiment_name,
         run_name,
     )
 
@@ -124,18 +124,18 @@ def log_sysid_run(
 # ---------------------------------------------------------------------- #
 
 
-def _config_params(cfg: SysIDConfig, summary: dict) -> dict[str, Any]:
-    ow = cfg.ekf.objective_weights
-    pn = cfg.ekf.process_noise
+def _config_params(config: SysIDConfig, summary: dict) -> dict[str, Any]:
+    ow = config.ekf.objective_weights
+    pn = config.ekf.process_noise
     return {
-        "city": cfg.selection.city,
-        "house_name": cfg.selection.house_name,
-        "history_hours": cfg.dataset.history_hours,
-        "split.train": cfg.dataset.splits.train,
-        "split.val": cfg.dataset.splits.val,
-        "split.test": cfg.dataset.splits.test,
-        "ekf.r_value": cfg.ekf.r_value,
-        "ekf.n_steps_ahead": cfg.ekf.n_steps_ahead,
+        "city": config.selection.city,
+        "house_name": config.selection.house_name,
+        "history_hours": config.dataset.history_hours,
+        "split.train": config.dataset.splits.train,
+        "split.val": config.dataset.splits.val,
+        "split.test": config.dataset.splits.test,
+        "ekf.r_value": config.ekf.r_value,
+        "ekf.n_steps_ahead": config.ekf.n_steps_ahead,
         "ekf.w_one_step": ow.one_step,
         "ekf.w_n_step": ow.n_step,
         "process_noise.q_in_std_kw": pn.q_in_std_kw,
